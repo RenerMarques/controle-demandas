@@ -6,18 +6,17 @@ from datetime import datetime
 
 # --- CONFIGURAÇÃO DA CONEXÃO ---
 def conectar_gsheets():
-    # Isso vai buscar os dados que você colará na aba 'Secrets' do Streamlit Cloud
     creds_dict = st.secrets["gcp_service_account"]
-    
-    # Prepara as credenciais usando o dicionário
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, [
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive'
     ])
-    
     client = gspread.authorize(creds)
     spreadsheet_id = "10F1PqOSXUj_tbN7qrm9qXKnKJQ7xcHUmtIOB72FpWaM"
-    return client.open_by_key(spreadsheet_id).sheet1
+    
+    # Abre o arquivo e seleciona a primeira aba explicitamente
+    spreadsheet = client.open_by_key(spreadsheet_id)
+    return spreadsheet.get_worksheet(0) # 0 é a primeira aba
 
 sheet = conectar_gsheets()
 
@@ -119,40 +118,40 @@ with tab3:
 with tab4:
     st.header("Excluir Demanda")
     
-    # 1. Recarregar e limpar dados
-    data = sheet.get_all_records()
-    df_temp = pd.DataFrame(data)
-    
-    # Remove espaços vazios nos nomes das colunas e linhas
-    df_temp.columns = df_temp.columns.str.strip()
-    
-    # Exibir colunas na tela para conferir (isso vai te dar a resposta definitiva)
-    st.write("Colunas detectadas:", df_temp.columns.tolist())
-    
-    # 2. Formulário de Exclusão
-    with st.form("form_exclusao"):
-        # Use os nomes exatos que aparecerem após o "Colunas detectadas:"
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            demanda_selecionada = st.selectbox("Selecione a Demanda", df_temp[df_temp.columns[0]].unique())
-        with col2:
-            data_selecionada = st.selectbox("Selecione a Data", df_temp[df_temp.columns[1]].unique())
-        with col3:
-            capitulo_selecionado = st.selectbox("Selecione o Capítulo", df_temp[df_temp.columns[2]].unique())
+    try:
+        # Puxa os dados diretamente do objeto sheet que já está na memória
+        data = sheet.get_all_records()
+        if not data:
+            st.warning("A planilha parece estar vazia.")
+        else:
+            df_temp = pd.DataFrame(data)
+            df_temp.columns = df_temp.columns.str.strip()
             
-        if st.form_submit_button("Excluir Demanda"):
-            # Lógica de exclusão usando índices dinâmicos
-            filtro = (df_temp[df_temp.columns[0]] == demanda_selecionada) & \
-                     (df_temp[df_temp.columns[1]] == data_selecionada) & \
-                     (df_temp[df_temp.columns[2]] == capitulo_selecionado)
-            
-            resultado = df_temp[filtro]
-            
-            if not resultado.empty:
-                linha_para_excluir = resultado.index[0] + 2
-                sheet.delete_rows(linha_para_excluir)
-                st.success("Demanda excluída!")
-                st.rerun()
-            else:
-                st.error("Não encontrei esse registro.")
+            # Formulário
+            with st.form("form_exclusao"):
+                col1, col2, col3 = st.columns(3)
+                # Dica: Use os nomes reais das colunas para evitar confusão com índices
+                with col1:
+                    demanda_selecionada = st.selectbox("Selecione a Demanda", df_temp["DEMANDA"].unique())
+                with col2:
+                    data_selecionada = st.selectbox("Selecione a Data", df_temp["DATA LINKAGEM"].unique())
+                with col3:
+                    capitulo_selecionado = st.selectbox("Selecione o Capítulo", df_temp["CAPITULO"].unique())
+                    
+                if st.form_submit_button("Excluir Demanda"):
+                    filtro = (df_temp["DEMANDA"] == demanda_selecionada) & \
+                             (df_temp["DATA LINKAGEM"] == data_selecionada) & \
+                             (df_temp["CAPITULO"] == capitulo_selecionado)
+                    
+                    resultado = df_temp[filtro]
+                    
+                    if not resultado.empty:
+                        linha_para_excluir = resultado.index[0] + 2
+                        sheet.delete_rows(linha_para_excluir)
+                        st.success("Demanda excluída com sucesso!")
+                        st.rerun()
+                    else:
+                        st.error("Registro não encontrado.")
+    except Exception as e:
+        st.error(f"Erro ao carregar dados na tab4: {e}")
             
