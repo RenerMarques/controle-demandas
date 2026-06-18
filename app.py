@@ -119,41 +119,40 @@ with tab3:
 with tab4:
     st.header("Excluir Demanda")
     
-    # Exemplo de como capturar as escolhas do usuário antes do botão
-    form_exclusao = st.form("form_exclusao")
-    with form_exclusao:
+    # 1. Recarregar e limpar dados
+    data = sheet.get_all_records()
+    df_temp = pd.DataFrame(data)
+    
+    # Remove espaços vazios nos nomes das colunas e linhas
+    df_temp.columns = df_temp.columns.str.strip()
+    
+    # Exibir colunas na tela para conferir (isso vai te dar a resposta definitiva)
+    st.write("Colunas detectadas:", df_temp.columns.tolist())
+    
+    # 2. Formulário de Exclusão
+    with st.form("form_exclusao"):
+        # Use os nomes exatos que aparecerem após o "Colunas detectadas:"
         col1, col2, col3 = st.columns(3)
         with col1:
-            demanda_selecionada = st.selectbox("Selecione a Demanda", df['Nome da Demanda'].unique())
+            demanda_selecionada = st.selectbox("Selecione a Demanda", df_temp[df_temp.columns[0]].unique())
         with col2:
-            data_selecionada = st.selectbox("Selecione a Data", df['Data'].unique())
+            data_selecionada = st.selectbox("Selecione a Data", df_temp[df_temp.columns[1]].unique())
         with col3:
-            capitulo_selecionado = st.selectbox("Selecione o Capítulo", df['Capitulo'].unique())
+            capitulo_selecionado = st.selectbox("Selecione o Capítulo", df_temp[df_temp.columns[2]].unique())
             
         if st.form_submit_button("Excluir Demanda"):
-            try:
-                # Carrega dados atualizados para garantir que temos o índice certo
-                dados = sheet.get_all_records()
-                df_atual = pd.DataFrame(dados)
-                
-                # Aplica o filtro triplo
-                filtro = (df_atual['Demanda'] == demanda_selecionada) & \
-                         (df_atual['Data'] == data_selecionada) & \
-                         (df_atual['Capitulo'] == capitulo_selecionado)
-                
-                resultado = df_atual[filtro]
-                
-                if not resultado.empty:
-                    # O index do pandas + 2 (cabeçalho + base 1 do gspread)
-                    linha_para_excluir = resultado.index[0] + 2
-                    
-                    sheet.delete_rows(linha_para_excluir)
-                    
-                    st.success("Demanda excluída com sucesso!")
-                    st.cache_data.clear()
-                    st.rerun()
-                else:
-                    st.error("Nenhum registro encontrado com esses critérios!")
-                    
-            except Exception as e:
-                st.error(f"Erro ao processar exclusão: {e}")
+            # Lógica de exclusão usando índices dinâmicos
+            filtro = (df_temp[df_temp.columns[0]] == demanda_selecionada) & \
+                     (df_temp[df_temp.columns[1]] == data_selecionada) & \
+                     (df_temp[df_temp.columns[2]] == capitulo_selecionado)
+            
+            resultado = df_temp[filtro]
+            
+            if not resultado.empty:
+                linha_para_excluir = resultado.index[0] + 2
+                sheet.delete_rows(linha_para_excluir)
+                st.success("Demanda excluída!")
+                st.rerun()
+            else:
+                st.error("Não encontrei esse registro.")
+            
