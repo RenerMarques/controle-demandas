@@ -124,7 +124,7 @@ with tab4:
     with form_exclusao:
         col1, col2, col3 = st.columns(3)
         with col1:
-            demanda_selecionada = st.selectbox("Selecione a Demanda", df['Demanda'].unique())
+            demanda_selecionada = st.selectbox("Selecione a Demanda", df['Nome da Demanda'].unique())
         with col2:
             data_selecionada = st.selectbox("Selecione a Data", df['Data'].unique())
         with col3:
