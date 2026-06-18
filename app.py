@@ -118,40 +118,45 @@ with tab3:
 with tab4:
     st.header("Excluir Demanda")
     
+    headers = ["DEMANDA", "TIPO DEMANDA", "MÓDULO", "MANUAL", 
+               "DATA LINKAGEM", "CAPITULO", "MONTADORA", "VERSÃO"]
+    
     try:
-        # Puxa os dados diretamente do objeto sheet que já está na memória
-        data = sheet.get_all_records()
-        if not data:
-            st.warning("A planilha parece estar vazia.")
-        else:
-            df_temp = pd.DataFrame(data)
-            df_temp.columns = df_temp.columns.str.strip()
+        data = sheet.get_all_records(expected_headers=headers)
+        df_temp = pd.DataFrame(data)
+        
+        # 1. Filtro de Demanda
+        demandas_disponiveis = df_temp["DEMANDA"].unique().tolist()
+        demanda_selecionada = st.selectbox("Selecione a Demanda", [""] + demandas_disponiveis)
+        
+        if demanda_selecionada:
+            # 2. Filtra as datas baseadas na demanda escolhida
+            datas_disponiveis = df_temp[df_temp["DEMANDA"] == demanda_selecionada]["DATA LINKAGEM"].unique().tolist()
+            data_selecionada = st.selectbox("Selecione a Data", [""] + datas_disponiveis)
             
-            # Formulário
-            with st.form("form_exclusao"):
-                col1, col2, col3 = st.columns(3)
-                # Dica: Use os nomes reais das colunas para evitar confusão com índices
-                with col1:
-                    demanda_selecionada = st.selectbox("Selecione a Demanda", df_temp["DEMANDA"].unique())
-                with col2:
-                    data_selecionada = st.selectbox("Selecione a Data", df_temp["DATA LINKAGEM"].unique())
-                with col3:
-                    capitulo_selecionado = st.selectbox("Selecione o Capítulo", df_temp["CAPITULO"].unique())
-                    
-                if st.form_submit_button("Excluir Demanda"):
-                    filtro = (df_temp["DEMANDA"] == demanda_selecionada) & \
-                             (df_temp["DATA LINKAGEM"] == data_selecionada) & \
-                             (df_temp["CAPITULO"] == capitulo_selecionado)
-                    
-                    resultado = df_temp[filtro]
-                    
-                    if not resultado.empty:
+            if data_selecionada:
+                # 3. Filtra os capítulos baseados na demanda E data escolhidas
+                capitulos_disponiveis = df_temp[
+                    (df_temp["DEMANDA"] == demanda_selecionada) & 
+                    (df_temp["DATA LINKAGEM"] == data_selecionada)
+                ]["CAPITULO"].unique().tolist()
+                
+                capitulo_selecionado = st.selectbox("Selecione o Capítulo", [""] + capitulos_disponiveis)
+                
+                # Botão só aparece quando tudo estiver selecionado
+                if capitulo_selecionado:
+                    if st.button("Excluir esta Demanda específica"):
+                        filtro = (df_temp["DEMANDA"] == demanda_selecionada) & \
+                                 (df_temp["DATA LINKAGEM"] == data_selecionada) & \
+                                 (df_temp["CAPITULO"] == capitulo_selecionado)
+                        
+                        resultado = df_temp[filtro]
                         linha_para_excluir = resultado.index[0] + 2
+                        
                         sheet.delete_rows(linha_para_excluir)
                         st.success("Demanda excluída com sucesso!")
                         st.rerun()
-                    else:
-                        st.error("Registro não encontrado.")
+
     except Exception as e:
-        st.error(f"Erro ao carregar dados na tab4: {e}")
+        st.error(f"Erro ao carregar filtros: {e}")
             
