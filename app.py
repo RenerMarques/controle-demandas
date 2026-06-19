@@ -142,44 +142,62 @@ if escolha == "Lista de Modelos":
                 st.rerun()
 
     with tab_m5:
-        st.header("📊 Relatórios e Exportação de Modelos")
+        st.header("📊 Relatórios Detalhados")
+        # Carrega os dados uma vez para o relatório
         df_mod_geral = pd.DataFrame(sheet_modelos.get_all_records())
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("Modelos por Módulo")
-            st.bar_chart(df_mod_geral["MÓDULO"].value_counts())
-        with col2:
-            st.subheader("Modelos por Montadora")
-            st.bar_chart(df_mod_geral["MONTADORA"].value_counts())
+        
+        # --- 1. FILTROS DINÂMICOS ---
+        st.subheader("Filtros de Visualização e Exportação")
+        c1, c2, c3 = st.columns(3)
+        
+        with c1:
+            f_mod = st.selectbox("Módulo:", ["Todos"] + sorted(df_mod_geral["MÓDULO"].unique().tolist()))
+            f_man = st.selectbox("Manual:", ["Todos"] + sorted(df_mod_geral["MANUAL"].unique().tolist()))
+        with c2:
+            f_mon = st.selectbox("Montadora:", ["Todas"] + sorted(df_mod_geral["MONTADORA"].unique().tolist()))
+            f_cap = st.selectbox("Capítulo:", ["Todos"] + sorted(df_mod_geral["CAPITULO"].unique().tolist()))
+        with c3:
+            f_mod_ex = st.selectbox("Modelo:", ["Todos"] + sorted(df_mod_geral["MODELO"].unique().tolist()))
+            formato = st.radio("Formato de Exportação:", ["Excel (.xlsx)", "PDF (.pdf)"], horizontal=True)
+
+        # Aplicar filtros
+        df_exp = df_mod_geral.copy()
+        if f_mod != "Todos": df_exp = df_exp[df_exp["MÓDULO"] == f_mod]
+        if f_man != "Todos": df_exp = df_exp[df_exp["MANUAL"] == f_man]
+        if f_mon != "Todas": df_exp = df_exp[df_exp["MONTADORA"] == f_mon]
+        if f_cap != "Todos": df_exp = df_exp[df_exp["CAPITULO"] == f_cap]
+        if f_mod_ex != "Todos": df_exp = df_exp[df_exp["MODELO"] == f_mod_ex]
+
+        # --- 2. VISUALIZAÇÃO NA TELA ---
         st.divider()
-        st.subheader("📥 Gerar e Exportar Relatório de Modelos")
-        col_sel, formato_sel = st.columns(2)
-        with col_sel:
-            filtro_mod = st.selectbox("Módulo:", ["Todos"] + df_mod_geral["MÓDULO"].unique().tolist())
-            filtro_mont = st.selectbox("Montadora:", ["Todas"] + df_mod_geral["MONTADORA"].unique().tolist())
-        with formato_sel:
-            formato = st.radio("Formato de exportação:", ["Excel (.xlsx)", "PDF (.pdf)"], key="radio_rel_mod")
-        df_export_mod = df_mod_geral.copy()
-        if filtro_mod != "Todos": df_export_mod = df_export_mod[df_export_mod["MÓDULO"] == filtro_mod]
-        if filtro_mont != "Todas": df_export_mod = df_export_mod[df_export_mod["MONTADORA"] == filtro_mont]
-        if formato == "Excel (.xlsx)":
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df_export_mod.to_excel(writer, index=False)
-            st.download_button("📥 Baixar Excel", data=buffer.getvalue(), file_name="relatorio_modelos.xlsx", mime="application/vnd.ms-excel")
-        elif formato == "PDF (.pdf)":
-            buffer = io.BytesIO()
-            c = canvas.Canvas(buffer, pagesize=A4)
-            c.setFont("Helvetica-Bold", 14)
-            c.drawString(100, 800, "Relatório de Modelos")
-            c.setFont("Helvetica", 10)
-            y = 750
-            for i, row in df_export_mod.iterrows():
-                c.drawString(100, y, f"{row['MODELO']} | Mód: {row['MÓDULO']} | Mont: {row['MONTADORA']}")
-                y -= 20
-                if y < 50: c.showPage(); y = 800
-            c.save()
-            st.download_button("📥 Baixar PDF", data=buffer.getvalue(), file_name="relatorio_modelos.pdf", mime="application/pdf")
+        st.write(f"### Visualização: {len(df_exp)} registros encontrados")
+        st.dataframe(df_exp, use_container_width=True, hide_index=True)
+        st.divider()
+
+        # --- 3. EXPORTAÇÃO ---
+        if not df_exp.empty:
+            if formato == "Excel (.xlsx)":
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                    df_exp.to_excel(writer, index=False)
+                st.download_button("📥 Baixar Relatório Excel", data=buffer.getvalue(), file_name="relatorio_modelos.xlsx", mime="application/vnd.ms-excel")
+            
+            else: # PDF
+                buffer = io.BytesIO()
+                c = canvas.Canvas(buffer, pagesize=A4)
+                c.setFont("Helvetica-Bold", 16)
+                c.drawString(50, 800, "Relatório de Modelos")
+                c.setFont("Helvetica", 10)
+                y = 750
+                for _, row in df_exp.iterrows():
+                    linha = f"{row['MÓDULO']} | {row['MANUAL']} | {row['MONTADORA']} | {row['MODELO']}"
+                    c.drawString(50, y, linha)
+                    y -= 20
+                    if y < 50: c.showPage(); y = 800
+                c.save()
+                st.download_button("📥 Baixar Relatório PDF", data=buffer.getvalue(), file_name="relatorio_modelos.pdf", mime="application/pdf")
+        else:
+            st.warning("Nenhum registro encontrado para exportar.")
 
 else:
     st.title("📋 Controle de Demandas")
