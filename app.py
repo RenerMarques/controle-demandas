@@ -64,7 +64,6 @@ if escolha == "Lista de Modelos":
                 m_modelo = st.text_input("Modelo")
             
             if st.form_submit_button("Salvar Modelo"):
-                # Insere na planilha de modelos (sheet_modelos)
                 sheet_modelos.insert_row([m_modulo, m_manual, m_capitulo, m_montadora, m_modelo], index=2)
                 st.success("Modelo salvo com sucesso!")
                 st.rerun()
@@ -72,47 +71,32 @@ if escolha == "Lista de Modelos":
     with tab_m2:
         st.subheader("🔍 Busca Avançada de Modelos")
         df_mod = pd.DataFrame(sheet_modelos.get_all_records())
-    
-        # Escolha do método
+        
         modo_busca_m = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], key="radio_mod", horizontal=True)
 
         if modo_busca_m == "Filtros em Cascata":
             col_a, col_b, col_c = st.columns(3)
-        
             with col_a:
-                # 1. Módulo
                 mod_sel = st.selectbox("Módulo", ["Todos"] + df_mod["MÓDULO"].unique().tolist())
                 df_f1 = df_mod if mod_sel == "Todos" else df_mod[df_mod["MÓDULO"] == mod_sel]
-            
-                # 2. Manual
                 man_sel = st.selectbox("Manual", ["Todos"] + df_f1["MANUAL"].unique().tolist())
                 df_f2 = df_f1 if man_sel == "Todos" else df_f1[df_f1["MANUAL"] == man_sel]
-            
-                with col_b:
-                    # 3. Montadora
-                    mont_sel = st.selectbox("Montadora", ["Todas"] + df_f2["MONTADORA"].unique().tolist())
-                    df_f3 = df_f2 if mont_sel == "Todas" else df_f2[df_f2["MONTADORA"] == mont_sel]
-            
-                    # 4. Capítulo
-                    cap_sel = st.selectbox("Capítulo", ["Todos"] + df_f3["CAPITULO"].unique().tolist())
-                    df_f4 = df_f3 if cap_sel == "Todos" else df_f3[df_f3["CAPITULO"] == cap_sel]
-            
-                    with col_c:
-                        # 5. Modelo
-                        model_sel = st.selectbox("Modelo", ["Todos"] + df_f4["MODELO"].unique().tolist())
-                        final_mod = df_f4 if model_sel == "Todos" else df_f4[df_f4["MODELO"] == model_sel]
-            
-                        st.divider()
-                        st.dataframe(final_mod, use_container_width=True)
-
+            with col_b:
+                mont_sel = st.selectbox("Montadora", ["Todas"] + df_f2["MONTADORA"].unique().tolist())
+                df_f3 = df_f2 if mont_sel == "Todas" else df_f2[df_f2["MONTADORA"] == mont_sel]
+                cap_sel = st.selectbox("Capítulo", ["Todos"] + df_f3["CAPITULO"].unique().tolist())
+                df_f4 = df_f3 if cap_sel == "Todos" else df_f3[df_f3["CAPITULO"] == cap_sel]
+            with col_c:
+                model_sel = st.selectbox("Modelo", ["Todos"] + df_f4["MODELO"].unique().tolist())
+                final_mod = df_f4 if model_sel == "Todos" else df_f4[df_f4["MODELO"] == model_sel]
+                st.divider()
+                st.dataframe(final_mod, use_container_width=True)
         else:
-            # Busca por Campo Específico
             col_1, col_2 = st.columns(2)
             with col_1:
                 coluna_alvo = st.selectbox("Selecione o campo:", df_mod.columns.tolist(), key="col_mod")
             with col_2:
                 valor_busca = st.text_input("Digite o valor para busca:", key="val_mod")
-        
             if valor_busca:
                 resultado_mod = df_mod[df_mod[coluna_alvo].astype(str).str.contains(valor_busca, case=False)]
                 st.write(f"Resultados encontrados:")
@@ -123,17 +107,14 @@ if escolha == "Lista de Modelos":
     with tab_m3:
         st.subheader("📝 Editar Modelo")
         df_mod = pd.DataFrame(sheet_modelos.get_all_records())
-        # Seleciona o modelo (vamos usar o campo "Modelo" como chave)
         modelo_sel = st.selectbox("Selecione o Modelo para editar:", df_mod["MODELO"].tolist())
         dados = df_mod[df_mod["MODELO"] == modelo_sel].iloc[0]
-        
         with st.form("form_edit_m"):
             n_mod = st.selectbox("Módulo", LISTA_MODULOS, index=LISTA_MODULOS.index(dados["MÓDULO"]))
             n_man = st.selectbox("Manual", LISTA_MANUAIS, index=LISTA_MANUAIS.index(dados["MANUAL"]))
             n_cap = st.text_input("Capítulo", value=dados["CAPITULO"])
             n_mon = st.selectbox("Montadora", LISTA_MONTADORAS, index=LISTA_MONTADORAS.index(dados["MONTADORA"]))
             n_model = st.text_input("Modelo", value=dados["MODELO"])
-            
             if st.form_submit_button("Atualizar"):
                 cell = sheet_modelos.find(modelo_sel)
                 sheet_modelos.update(range_name=f"A{cell.row}:E{cell.row}", values=[[n_mod, n_man, n_cap, n_mon, n_model]])
@@ -154,8 +135,6 @@ if escolha == "Lista de Modelos":
     with tab_m5:
         st.header("📊 Relatórios e Exportação de Modelos")
         df_mod_geral = pd.DataFrame(sheet_modelos.get_all_records())
-    
-        # --- 1. MÉTRICAS SIMPLES ---
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Modelos por Módulo")
@@ -163,49 +142,33 @@ if escolha == "Lista de Modelos":
         with col2:
             st.subheader("Modelos por Montadora")
             st.bar_chart(df_mod_geral["MONTADORA"].value_counts())
-
         st.divider()
-
-        # --- 2. GERADOR DE RELATÓRIO FILTRADO ---
         st.subheader("📥 Gerar e Exportar Relatório de Modelos")
         col_sel, formato_sel = st.columns(2)
-    
         with col_sel:
-            # Filtros baseados nas colunas que você tem
             filtro_mod = st.selectbox("Módulo:", ["Todos"] + df_mod_geral["MÓDULO"].unique().tolist())
             filtro_mont = st.selectbox("Montadora:", ["Todas"] + df_mod_geral["MONTADORA"].unique().tolist())
-    
         with formato_sel:
             formato = st.radio("Formato de exportação:", ["Excel (.xlsx)", "PDF (.pdf)"], key="radio_rel_mod")
-
-        # Filtragem dos dados
         df_export_mod = df_mod_geral.copy()
         if filtro_mod != "Todos": df_export_mod = df_export_mod[df_export_mod["MÓDULO"] == filtro_mod]
         if filtro_mont != "Todas": df_export_mod = df_export_mod[df_export_mod["MONTADORA"] == filtro_mont]
-
-        # Lógica de Exportação
         if formato == "Excel (.xlsx)":
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 df_export_mod.to_excel(writer, index=False)
             st.download_button("📥 Baixar Excel", data=buffer.getvalue(), file_name="relatorio_modelos.xlsx", mime="application/vnd.ms-excel")
-
         elif formato == "PDF (.pdf)":
             buffer = io.BytesIO()
             c = canvas.Canvas(buffer, pagesize=A4)
             c.setFont("Helvetica-Bold", 14)
-            c.drawString(100, 800, "Relatório de Modelos Cadastrados")
+            c.drawString(100, 800, "Relatório de Modelos")
             c.setFont("Helvetica", 10)
-        
             y = 750
             for i, row in df_export_mod.iterrows():
-                texto = f"{row['MODELO']} | Mód: {row['MÓDULO']} | Mont: {row['MONTADORA']}"
-                c.drawString(100, y, texto)
+                c.drawString(100, y, f"{row['MODELO']} | Mód: {row['MÓDULO']} | Mont: {row['MONTADORA']}")
                 y -= 20
-                if y < 50: # Nova página
-                    c.showPage()
-                    c.setFont("Helvetica", 10)
-                    y = 800
+                if y < 50: c.showPage(); y = 800
             c.save()
             st.download_button("📥 Baixar PDF", data=buffer.getvalue(), file_name="relatorio_modelos.pdf", mime="application/pdf")
 
