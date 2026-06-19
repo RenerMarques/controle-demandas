@@ -152,62 +152,62 @@ if escolha == "Lista de Modelos":
                 st.rerun()
 
     with tab_m5:
-    st.header("📊 Relatórios e Exportação de Modelos")
-    df_mod_geral = pd.DataFrame(sheet_modelos.get_all_records())
+        st.header("📊 Relatórios e Exportação de Modelos")
+        df_mod_geral = pd.DataFrame(sheet_modelos.get_all_records())
     
-    # --- 1. MÉTRICAS SIMPLES ---
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Modelos por Módulo")
-        st.bar_chart(df_mod_geral["MÓDULO"].value_counts())
-    with col2:
-        st.subheader("Modelos por Montadora")
-        st.bar_chart(df_mod_geral["MONTADORA"].value_counts())
+        # --- 1. MÉTRICAS SIMPLES ---
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader("Modelos por Módulo")
+            st.bar_chart(df_mod_geral["MÓDULO"].value_counts())
+        with col2:
+            st.subheader("Modelos por Montadora")
+            st.bar_chart(df_mod_geral["MONTADORA"].value_counts())
 
-    st.divider()
+         st.divider()
 
-    # --- 2. GERADOR DE RELATÓRIO FILTRADO ---
-    st.subheader("📥 Gerar e Exportar Relatório de Modelos")
-    col_sel, formato_sel = st.columns(2)
+        # --- 2. GERADOR DE RELATÓRIO FILTRADO ---
+        st.subheader("📥 Gerar e Exportar Relatório de Modelos")
+        col_sel, formato_sel = st.columns(2)
     
-    with col_sel:
-        # Filtros baseados nas colunas que você tem
-        filtro_mod = st.selectbox("Módulo:", ["Todos"] + df_mod_geral["MÓDULO"].unique().tolist())
-        filtro_mont = st.selectbox("Montadora:", ["Todas"] + df_mod_geral["MONTADORA"].unique().tolist())
+        with col_sel:
+            # Filtros baseados nas colunas que você tem
+            filtro_mod = st.selectbox("Módulo:", ["Todos"] + df_mod_geral["MÓDULO"].unique().tolist())
+            filtro_mont = st.selectbox("Montadora:", ["Todas"] + df_mod_geral["MONTADORA"].unique().tolist())
     
-    with formato_sel:
-        formato = st.radio("Formato de exportação:", ["Excel (.xlsx)", "PDF (.pdf)"], key="radio_rel_mod")
+        with formato_sel:
+            formato = st.radio("Formato de exportação:", ["Excel (.xlsx)", "PDF (.pdf)"], key="radio_rel_mod")
 
-    # Filtragem dos dados
-    df_export_mod = df_mod_geral.copy()
-    if filtro_mod != "Todos": df_export_mod = df_export_mod[df_export_mod["MÓDULO"] == filtro_mod]
-    if filtro_mont != "Todas": df_export_mod = df_export_mod[df_export_mod["MONTADORA"] == filtro_mont]
+        # Filtragem dos dados
+        df_export_mod = df_mod_geral.copy()
+        if filtro_mod != "Todos": df_export_mod = df_export_mod[df_export_mod["MÓDULO"] == filtro_mod]
+        if filtro_mont != "Todas": df_export_mod = df_export_mod[df_export_mod["MONTADORA"] == filtro_mont]
 
-    # Lógica de Exportação
-    if formato == "Excel (.xlsx)":
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df_export_mod.to_excel(writer, index=False)
-        st.download_button("📥 Baixar Excel", data=buffer.getvalue(), file_name="relatorio_modelos.xlsx", mime="application/vnd.ms-excel")
+        # Lógica de Exportação
+        if formato == "Excel (.xlsx)":
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                df_export_mod.to_excel(writer, index=False)
+            st.download_button("📥 Baixar Excel", data=buffer.getvalue(), file_name="relatorio_modelos.xlsx", mime="application/vnd.ms-excel")
 
-    elif formato == "PDF (.pdf)":
-        buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=A4)
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(100, 800, "Relatório de Modelos Cadastrados")
-        c.setFont("Helvetica", 10)
+        elif formato == "PDF (.pdf)":
+            buffer = io.BytesIO()
+            c = canvas.Canvas(buffer, pagesize=A4)
+            c.setFont("Helvetica-Bold", 14)
+            c.drawString(100, 800, "Relatório de Modelos Cadastrados")
+            c.setFont("Helvetica", 10)
         
-        y = 750
-        for i, row in df_export_mod.iterrows():
-            texto = f"{row['MODELO']} | Mód: {row['MÓDULO']} | Mont: {row['MONTADORA']}"
-            c.drawString(100, y, texto)
-            y -= 20
-            if y < 50: # Nova página
-                c.showPage()
-                c.setFont("Helvetica", 10)
-                y = 800
-        c.save()
-        st.download_button("📥 Baixar PDF", data=buffer.getvalue(), file_name="relatorio_modelos.pdf", mime="application/pdf")
+            y = 750
+            for i, row in df_export_mod.iterrows():
+                texto = f"{row['MODELO']} | Mód: {row['MÓDULO']} | Mont: {row['MONTADORA']}"
+                c.drawString(100, y, texto)
+                y -= 20
+                if y < 50: # Nova página
+                    c.showPage()
+                    c.setFont("Helvetica", 10)
+                    y = 800
+            c.save()
+            st.download_button("📥 Baixar PDF", data=buffer.getvalue(), file_name="relatorio_modelos.pdf", mime="application/pdf")
 
 else:
     st.title("📋 Controle de Demandas")
