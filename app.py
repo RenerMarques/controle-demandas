@@ -75,34 +75,43 @@ if escolha == "Lista de Modelos":
         modo_busca_m = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], key="radio_mod", horizontal=True)
 
         if modo_busca_m == "Filtros em Cascata":
-            col_a, col_b, col_c = st.columns(3)
-            with col_a:
+            # Usando colunas mais equilibradas (Grid 3x2)
+            c1, c2, c3 = st.columns(3)
+            
+            with c1:
                 mod_sel = st.selectbox("Módulo", ["Todos"] + df_mod["MÓDULO"].unique().tolist())
-                df_f1 = df_mod if mod_sel == "Todos" else df_mod[df_mod["MÓDULO"] == mod_sel]
-                man_sel = st.selectbox("Manual", ["Todos"] + df_f1["MANUAL"].unique().tolist())
-                df_f2 = df_f1 if man_sel == "Todos" else df_f1[df_f1["MANUAL"] == man_sel]
-            with col_b:
-                mont_sel = st.selectbox("Montadora", ["Todas"] + df_f2["MONTADORA"].unique().tolist())
-                df_f3 = df_f2 if mont_sel == "Todas" else df_f2[df_f2["MONTADORA"] == mont_sel]
-                cap_sel = st.selectbox("Capítulo", ["Todos"] + df_f3["CAPITULO"].unique().tolist())
-                df_f4 = df_f3 if cap_sel == "Todos" else df_f3[df_f3["CAPITULO"] == cap_sel]
-            with col_c:
-                model_sel = st.selectbox("Modelo", ["Todos"] + df_f4["MODELO"].unique().tolist())
-                final_mod = df_f4 if model_sel == "Todos" else df_f4[df_f4["MODELO"] == model_sel]
-                st.divider()
-                st.dataframe(final_mod, use_container_width=True)
+                man_sel = st.selectbox("Manual", ["Todos"] + df_mod["MANUAL"].unique().tolist())
+            with c2:
+                mont_sel = st.selectbox("Montadora", ["Todas"] + df_mod["MONTADORA"].unique().tolist())
+                cap_sel = st.selectbox("Capítulo", ["Todos"] + df_mod["CAPITULO"].unique().tolist())
+            with c3:
+                model_sel = st.selectbox("Modelo", ["Todos"] + df_mod["MODELO"].unique().tolist())
+                st.info(f"Total: {len(df_mod)} registros")
+
+            # Lógica de Filtragem (mais enxuta)
+            final_mod = df_mod.copy()
+            if mod_sel != "Todos": final_mod = final_mod[final_mod["MÓDULO"] == mod_sel]
+            if man_sel != "Todos": final_mod = final_mod[final_mod["MANUAL"] == man_sel]
+            if mont_sel != "Todas": final_mod = final_mod[final_mod["MONTADORA"] == mont_sel]
+            if cap_sel != "Todos": final_mod = final_mod[final_mod["CAPITULO"] == cap_sel]
+            if model_sel != "Todos": final_mod = final_mod[final_mod["MODELO"] == model_sel]
+                
+            st.divider()
+            st.dataframe(final_mod, use_container_width=True, hide_index=True)
+
         else:
-            col_1, col_2 = st.columns(2)
-            with col_1:
+            # Layout mais limpo para busca específica
+            c1, c2 = st.columns([1, 2])
+            with c1:
                 coluna_alvo = st.selectbox("Selecione o campo:", df_mod.columns.tolist(), key="col_mod")
-            with col_2:
-                valor_busca = st.text_input("Digite o valor para busca:", key="val_mod")
+            with c2:
+                valor_busca = st.text_input("Digite o valor para busca:", key="val_mod", placeholder="Ex: Ford")
+            
             if valor_busca:
                 resultado_mod = df_mod[df_mod[coluna_alvo].astype(str).str.contains(valor_busca, case=False)]
-                st.write(f"Resultados encontrados:")
-                st.dataframe(resultado_mod, use_container_width=True)
+                st.dataframe(resultado_mod, use_container_width=True, hide_index=True)
             else:
-                st.info("Selecione o campo e digite o valor acima para iniciar a busca.")
+                st.info("Digite um termo para começar a busca.")
 
     with tab_m3:
         st.subheader("📝 Editar Modelo")
