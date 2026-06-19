@@ -94,46 +94,54 @@ with tab2:
     df = carregar_dados()
     
     # Escolha do método de busca
-    modo_busca = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"])
+    modo_busca = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], horizontal=True)
 
     if modo_busca == "Filtros em Cascata":
-        st.sidebar.header("Filtros em Cascata")
+        st.info("Utilize os filtros abaixo para filtrar os dados:")
         
-        # 1. Módulo
-        mod_sel = st.sidebar.selectbox("Módulo", ["Todos"] + df["MÓDULO"].unique().tolist())
-        df_f1 = df if mod_sel == "Todos" else df[df["MÓDULO"] == mod_sel]
+        # Distribuindo os filtros em 3 colunas para ficar visualmente limpo
+        col_a, col_b, col_c = st.columns(3)
         
-        # 2. Tipo Demanda
-        tipo_sel = st.sidebar.selectbox("Tipo", ["Todos"] + df_f1["TIPO DEMANDA"].unique().tolist())
-        df_f2 = df_f1 if tipo_sel == "Todos" else df_f1[df_f1["TIPO DEMANDA"] == tipo_sel]
+        with col_a:
+            # 1. Módulo
+            mod_sel = st.selectbox("Módulo", ["Todos"] + df["MÓDULO"].unique().tolist())
+            df_f1 = df if mod_sel == "Todos" else df[df["MÓDULO"] == mod_sel]
+            
+            # 2. Tipo Demanda
+            tipo_sel = st.selectbox("Tipo", ["Todos"] + df_f1["TIPO DEMANDA"].unique().tolist())
+            df_f2 = df_f1 if tipo_sel == "Todos" else df_f1[df_f1["TIPO DEMANDA"] == tipo_sel]
+            
+        with col_b:
+            # 3. Montadora
+            mont_sel = st.selectbox("Montadora", ["Todas"] + df_f2["MONTADORA"].unique().tolist())
+            df_f3 = df_f2 if mont_sel == "Todas" else df_f2[df_f2["MONTADORA"] == mont_sel]
+            
+            # 4. Manual
+            man_sel = st.selectbox("Manual", ["Todos"] + df_f3["MANUAL"].unique().tolist())
+            df_f4 = df_f3 if man_sel == "Todos" else df_f3[df_f3["MANUAL"] == man_sel]
+            
+        with col_c:
+            # 5. Demanda
+            dem_sel = st.selectbox("Demanda", ["Todas"] + df_f4["DEMANDA"].unique().tolist())
+            final = df_f4 if dem_sel == "Todas" else df_f4[df_f4["DEMANDA"] == dem_sel]
         
-        # 3. Montadora (NOVO)
-        mont_sel = st.sidebar.selectbox("Montadora", ["Todas"] + df_f2["MONTADORA"].unique().tolist())
-        df_f3 = df_f2 if mont_sel == "Todas" else df_f2[df_f2["MONTADORA"] == mont_sel]
-        
-        # 4. Manual (NOVO)
-        man_sel = st.sidebar.selectbox("Manual", ["Todos"] + df_f3["MANUAL"].unique().tolist())
-        df_f4 = df_f3 if man_sel == "Todos" else df_f3[df_f3["MANUAL"] == man_sel]
-        
-        # 5. Demanda
-        dem_sel = st.sidebar.selectbox("Demanda", ["Todas"] + df_f4["DEMANDA"].unique().tolist())
-        
-        # Aplicar filtros
-        final = df_f4 if dem_sel == "Todas" else df_f4[df_f4["DEMANDA"] == dem_sel]
+        st.divider()
         st.dataframe(final, use_container_width=True)
 
     else:
-        st.sidebar.header("Busca Específica")
-        # Escolhe qual coluna pesquisar
-        coluna_alvo = st.sidebar.selectbox("Selecione o campo para buscar:", df.columns.tolist())
-        valor_busca = st.sidebar.text_input(f"Digite o valor para {coluna_alvo}:")
+        # Busca Específica dentro da página
+        col_1, col_2 = st.columns(2)
+        with col_1:
+            coluna_alvo = st.selectbox("Selecione o campo para buscar:", df.columns.tolist())
+        with col_2:
+            valor_busca = st.text_input(f"Digite o valor para busca:")
         
         if valor_busca:
             resultado = df[df[coluna_alvo].astype(str).str.contains(valor_busca, case=False)]
             st.write(f"Resultados para '{valor_busca}' em {coluna_alvo}:")
             st.dataframe(resultado, use_container_width=True)
         else:
-            st.info("Selecione o campo e digite o valor na barra lateral.")
+            st.info("Selecione o campo e digite o valor acima para iniciar a busca.")
 
 with tab3:
     st.subheader("Alterar Demanda Existente")
