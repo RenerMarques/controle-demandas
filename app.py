@@ -205,13 +205,18 @@ with tab5:
     
     with col1:
         st.subheader("Por Versão")
-        # Conta as demandas por versão
+        
+        # Garantimos que a coluna é texto, removemos espaços e só depois ordenamos
+        df_geral["VERSÃO"] = df_geral["VERSÃO"].astype(str).str.strip()
         contagem_versao = df_geral["VERSÃO"].value_counts().sort_index()
+        
         st.bar_chart(contagem_versao)
         
     with col2:
         st.subheader("Por Módulo")
-        contagem_modulo = df_geral["MÓDULO"].value_counts()
+        # Garantimos que a coluna é texto, removemos espaços e só depois ordenamos
+        df_geral["MÓDULO"] = df_geral["MÓDULO"].astype(str).str.strip()
+        contagem_modulo = df_geral["MÓDULO"].value_counts().sort_index()
         st.bar_chart(contagem_modulo)
 
     st.divider()
