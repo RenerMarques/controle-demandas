@@ -63,38 +63,42 @@ with tab1:
             st.rerun()
 
 with tab2:
-    st.subheader("Busca Avançada")
-    
-    # Carrega os dados (já temos a função carregar_dados())
+    st.subheader("🔍 Busca Avançada")
     df = carregar_dados()
     
-    # Filtros na Sidebar para não poluir a tela principal
-    st.sidebar.header("Filtros de Busca")
-    
-    # 1. Filtro de Módulo (Cascata nível 1)
-    modulo_selecionado = st.sidebar.selectbox("Filtrar por Módulo", ["Todos"] + df["MÓDULO"].unique().tolist())
-    
-    # 2. Filtro de Demanda (Cascata nível 2)
-    demandas_filtradas = df if modulo_selecionado == "Todos" else df[df["MÓDULO"] == modulo_selecionado]
-    demanda_busca = st.sidebar.selectbox("Filtrar por Demanda", ["Todas"] + demandas_filtradas["DEMANDA"].unique().tolist())
-    
-    # 3. Filtro de Data ou Versão (nível 3)
-    # Você pode ir adicionando quantos filtros quiser seguindo essa lógica
-    versao_busca = st.sidebar.selectbox("Filtrar por Versão", ["Todas"] + df["VERSÃO"].unique().tolist())
-    
-    # Aplicando todos os filtros ao DataFrame
-    df_resultado = df.copy()
-    
-    if modulo_selecionado != "Todos":
-        df_resultado = df_resultado[df_resultado["MÓDULO"] == modulo_selecionado]
-    if demanda_busca != "Todas":
-        df_resultado = df_resultado[df_resultado["DEMANDA"] == demanda_busca]
-    if versao_busca != "Todas":
-        df_resultado = df_resultado[df_resultado["VERSÃO"] == versao_busca]
+    # Escolha do método de busca
+    modo_busca = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"])
+
+    if modo_busca == "Filtros em Cascata":
+        st.sidebar.header("Filtros em Cascata")
         
-    # Exibe o resultado
-    st.write(f"Exibindo {len(df_resultado)} registros encontrados:")
-    st.dataframe(df_resultado, use_container_width=True)
+        # 1. Módulo
+        mod_sel = st.sidebar.selectbox("Módulo", ["Todos"] + df["MÓDULO"].unique().tolist())
+        
+        # 2. Tipo Demanda (Depende do Módulo)
+        df_f1 = df if mod_sel == "Todos" else df[df["MÓDULO"] == mod_sel]
+        tipo_sel = st.sidebar.selectbox("Tipo", ["Todos"] + df_f1["TIPO DEMANDA"].unique().tolist())
+        
+        # 3. Demanda (Depende do Módulo e Tipo)
+        df_f2 = df_f1 if tipo_sel == "Todos" else df_f1[df_f1["TIPO DEMANDA"] == tipo_sel]
+        dem_sel = st.sidebar.selectbox("Demanda", ["Todas"] + df_f2["DEMANDA"].unique().tolist())
+        
+        # Aplicar filtros
+        final = df_f2 if dem_sel == "Todas" else df_f2[df_f2["DEMANDA"] == dem_sel]
+        st.dataframe(final, use_container_width=True)
+
+    else:
+        st.sidebar.header("Busca Específica")
+        # Escolhe qual coluna pesquisar
+        coluna_alvo = st.sidebar.selectbox("Selecione o campo para buscar:", df.columns.tolist())
+        valor_busca = st.sidebar.text_input(f"Digite o valor para {coluna_alvo}:")
+        
+        if valor_busca:
+            resultado = df[df[coluna_alvo].astype(str).str.contains(valor_busca, case=False)]
+            st.write(f"Resultados para '{valor_busca}' em {coluna_alvo}:")
+            st.dataframe(resultado, use_container_width=True)
+        else:
+            st.info("Selecione o campo e digite o valor na barra lateral.")
 
 with tab3:
     st.subheader("Alterar Demanda Existente")
