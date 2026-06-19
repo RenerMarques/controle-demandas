@@ -77,33 +77,33 @@ if escolha == "Lista de Modelos":
         modo_busca_m = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], key="radio_mod", horizontal=True)
 
         if modo_busca_m == "Filtros em Cascata":
-        col_a, col_b, col_c = st.columns(3)
+            col_a, col_b, col_c = st.columns(3)
         
             with col_a:
-            # 1. Módulo
-            mod_sel = st.selectbox("Módulo", ["Todos"] + df_mod["MÓDULO"].unique().tolist())
-            df_f1 = df_mod if mod_sel == "Todos" else df_mod[df_mod["MÓDULO"] == mod_sel]
+                # 1. Módulo
+                mod_sel = st.selectbox("Módulo", ["Todos"] + df_mod["MÓDULO"].unique().tolist())
+                df_f1 = df_mod if mod_sel == "Todos" else df_mod[df_mod["MÓDULO"] == mod_sel]
             
-            # 2. Manual
-            man_sel = st.selectbox("Manual", ["Todos"] + df_f1["MANUAL"].unique().tolist())
-            df_f2 = df_f1 if man_sel == "Todos" else df_f1[df_f1["MANUAL"] == man_sel]
+                # 2. Manual
+                man_sel = st.selectbox("Manual", ["Todos"] + df_f1["MANUAL"].unique().tolist())
+                df_f2 = df_f1 if man_sel == "Todos" else df_f1[df_f1["MANUAL"] == man_sel]
             
-            with col_b:
-            # 3. Montadora
-            mont_sel = st.selectbox("Montadora", ["Todas"] + df_f2["MONTADORA"].unique().tolist())
-            df_f3 = df_f2 if mont_sel == "Todas" else df_f2[df_f2["MONTADORA"] == mont_sel]
+                with col_b:
+                # 3. Montadora
+                mont_sel = st.selectbox("Montadora", ["Todas"] + df_f2["MONTADORA"].unique().tolist())
+                df_f3 = df_f2 if mont_sel == "Todas" else df_f2[df_f2["MONTADORA"] == mont_sel]
             
-            # 4. Capítulo
-            cap_sel = st.selectbox("Capítulo", ["Todos"] + df_f3["CAPITULO"].unique().tolist())
-            df_f4 = df_f3 if cap_sel == "Todos" else df_f3[df_f3["CAPITULO"] == cap_sel]
+                # 4. Capítulo
+                cap_sel = st.selectbox("Capítulo", ["Todos"] + df_f3["CAPITULO"].unique().tolist())
+                df_f4 = df_f3 if cap_sel == "Todos" else df_f3[df_f3["CAPITULO"] == cap_sel]
             
             with col_c:
-            # 5. Modelo
-            model_sel = st.selectbox("Modelo", ["Todos"] + df_f4["MODELO"].unique().tolist())
-            final_mod = df_f4 if model_sel == "Todos" else df_f4[df_f4["MODELO"] == model_sel]
+                # 5. Modelo
+                model_sel = st.selectbox("Modelo", ["Todos"] + df_f4["MODELO"].unique().tolist())
+                final_mod = df_f4 if model_sel == "Todos" else df_f4[df_f4["MODELO"] == model_sel]
             
-            st.divider()
-            st.dataframe(final_mod, use_container_width=True)
+                st.divider()
+                st.dataframe(final_mod, use_container_width=True)
 
         else:
             # Busca por Campo Específico
