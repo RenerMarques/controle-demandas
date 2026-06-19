@@ -52,6 +52,8 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 
 with tab1:
     st.subheader("Nova Demanda")
+    
+    # --- FORMULÁRIO ---
     with st.form("form_adicionar", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -60,10 +62,7 @@ with tab1:
             modulo = st.selectbox("Módulo", LISTA_MODULOS)
             manual = st.selectbox("Manual", LISTA_MANUAIS)
         with col2:
-            # 1. Captura o objeto date (st.date_input retorna um objeto date, não uma string)
             data_obj = st.date_input("Data Linkagem")
-    
-            # 2. Converte para o formato brasileiro
             data_linkagem = data_obj.strftime("%d/%m/%Y") if data_obj else ""
             capitulo = st.text_input("Capítulo")
             montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
@@ -72,8 +71,23 @@ with tab1:
         if st.form_submit_button("Salvar Nova Demanda"):
             sheet.insert_row([demanda, tipo, modulo, manual, data_linkagem, capitulo, montadora, versao], index=2)
             st.success("Salvo com sucesso!")
-            st.cache_data.clear() # Limpa o cache para atualizar a busca
+            st.cache_data.clear() 
             st.rerun()
+
+    # --- TABELA DE VISUALIZAÇÃO ---
+    st.divider()
+    st.subheader("📋 Demandas Cadastradas Recentemente")
+    
+    # Recarrega os dados atualizados
+    # Nota: Certifique-se de que sua função carregar_dados() retorna o dataframe atualizado
+    df_atualizado = carregar_dados()
+    
+    # Exibe a tabela (mostrando as últimas 10 linhas para não ficar muito grande)
+    st.dataframe(
+        df_atualizado.head(10), 
+        use_container_width=True, 
+        hide_index=True
+    )
 
 with tab2:
     st.subheader("🔍 Busca Avançada")
