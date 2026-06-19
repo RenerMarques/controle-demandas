@@ -98,12 +98,12 @@ if escolha == "Lista de Modelos":
                     df_f4 = df_f3 if cap_sel == "Todos" else df_f3[df_f3["CAPITULO"] == cap_sel]
             
                     with col_c:
-                    # 5. Modelo
-                    model_sel = st.selectbox("Modelo", ["Todos"] + df_f4["MODELO"].unique().tolist())
-                    final_mod = df_f4 if model_sel == "Todos" else df_f4[df_f4["MODELO"] == model_sel]
+                        # 5. Modelo
+                        model_sel = st.selectbox("Modelo", ["Todos"] + df_f4["MODELO"].unique().tolist())
+                        final_mod = df_f4 if model_sel == "Todos" else df_f4[df_f4["MODELO"] == model_sel]
             
-                    st.divider()
-                    st.dataframe(final_mod, use_container_width=True)
+                        st.divider()
+                        st.dataframe(final_mod, use_container_width=True)
 
         else:
             # Busca por Campo Específico
