@@ -64,10 +64,7 @@ with tab1:
             data_obj = st.date_input("Data Linkagem")
     
             # 2. Converte para o formato brasileiro
-                if data_obj:
-                    data_linkagem = data_obj.strftime("%d/%m/%Y")
-                else:
-                    data_linkagem = ""
+            data_linkagem = data_obj.strftime("%d/%m/%Y") if data_obj else ""
             capitulo = st.text_input("Capítulo")
             montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
             versao = st.selectbox("Versão", LISTA_VERSOES)
