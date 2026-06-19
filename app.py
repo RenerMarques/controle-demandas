@@ -155,46 +155,48 @@ with tab3:
                 st.error(f"Erro detalhado: {e}")
 
 with tab4:
-    st.header("Excluir Demanda")
+    st.header("🗑️ Excluir Demanda")
     
-    headers = ["DEMANDA", "TIPO DEMANDA", "MÓDULO", "MANUAL", 
-               "DATA LINKAGEM", "CAPITULO", "MONTADORA", "VERSÃO"]
+    # Recarrega dados
+    df_temp = pd.DataFrame(sheet.get_all_records(expected_headers=["DEMANDA", "TIPO DEMANDA", "MÓDULO", "MANUAL", "DATA LINKAGEM", "CAPITULO", "MONTADORA", "VERSÃO"]))
     
-    try:
-        data = sheet.get_all_records(expected_headers=headers)
-        df_temp = pd.DataFrame(data)
+    # Filtros Cascata
+    demandas_disponiveis = df_temp["DEMANDA"].unique().tolist()
+    demanda_selecionada = st.selectbox("1. Selecione a Demanda", [""] + demandas_disponiveis)
+    
+    if demanda_selecionada:
+        datas_disponiveis = df_temp[df_temp["DEMANDA"] == demanda_selecionada]["DATA LINKAGEM"].unique().tolist()
+        data_selecionada = st.selectbox("2. Selecione a Data", [""] + datas_disponiveis)
         
-        # 1. Filtro de Demanda
-        demandas_disponiveis = df_temp["DEMANDA"].unique().tolist()
-        demanda_selecionada = st.selectbox("Selecione a Demanda", [""] + demandas_disponiveis)
-        
-        if demanda_selecionada:
-            # 2. Filtra as datas baseadas na demanda escolhida
-            datas_disponiveis = df_temp[df_temp["DEMANDA"] == demanda_selecionada]["DATA LINKAGEM"].unique().tolist()
-            data_selecionada = st.selectbox("Selecione a Data", [""] + datas_disponiveis)
+        if data_selecionada:
+            capitulos_disponiveis = df_temp[
+                (df_temp["DEMANDA"] == demanda_selecionada) & 
+                (df_temp["DATA LINKAGEM"] == data_selecionada)
+            ]["CAPITULO"].unique().tolist()
             
-            if data_selecionada:
-                # 3. Filtra os capítulos baseados na demanda E data escolhidas
-                capitulos_disponiveis = df_temp[
-                    (df_temp["DEMANDA"] == demanda_selecionada) & 
-                    (df_temp["DATA LINKAGEM"] == data_selecionada)
-                ]["CAPITULO"].unique().tolist()
-                
-                capitulo_selecionado = st.selectbox("Selecione o Capítulo", [""] + capitulos_disponiveis)
-                
-                # Botão só aparece quando tudo estiver selecionado
-                if capitulo_selecionado:
-                    if st.button("Excluir esta Demanda específica"):
+            capitulo_selecionado = st.selectbox("3. Selecione o Capítulo", [""] + capitulos_disponiveis)
+            
+            # --- O FORMULÁRIO DE CONFIRMAÇÃO ---
+            if capitulo_selecionado:
+                with st.form("confirmar_exclusao"):
+                    st.warning(f"Você tem certeza que deseja excluir a demanda: **{demanda_selecionada}**?")
+                    btn_excluir = st.form_submit_button("Confirmar e Excluir Definitivamente")
+                    
+                    if btn_excluir:
+                        # Identifica a linha
                         filtro = (df_temp["DEMANDA"] == demanda_selecionada) & \
                                  (df_temp["DATA LINKAGEM"] == data_selecionada) & \
                                  (df_temp["CAPITULO"] == capitulo_selecionado)
                         
                         resultado = df_temp[filtro]
-                        linha_para_excluir = resultado.index[0] + 2
                         
-                        sheet.delete_rows(linha_para_excluir)
-                        st.success("Demanda excluída com sucesso!")
-                        st.rerun()
+                        if not resultado.empty:
+                            linha_para_excluir = resultado.index[0] + 2
+                            sheet.delete_rows(linha_para_excluir)
+                            st.success("Demanda excluída com sucesso!")
+                            st.rerun() # Recarrega a página para atualizar os selects
+                        else:
+                            st.error("Erro: Registro não encontrado na planilha.")
 
     except Exception as e:
         st.error(f"Erro ao carregar filtros: {e}")
