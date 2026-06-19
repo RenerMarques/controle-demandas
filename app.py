@@ -7,32 +7,41 @@ import io
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+st.set_page_config(page_title="Gestão Integrada", layout="wide")
+
 # --- CONFIGURAÇÃO DA CONEXÃO ---
+@st.cache_resource
 def conectar_gsheets():
     creds_dict = st.secrets["gcp_service_account"]
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, [
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive'
     ])
-    client = gspread.authorize(creds)
-    spreadsheet_id = "10F1PqOSXUj_tbN7qrm9qXKnKJQ7xcHUmtIOB72FpWaM"
-    
-    # Abre o arquivo e seleciona a primeira aba explicitamente
-    spreadsheet = client.open_by_key(spreadsheet_id)
-    return spreadsheet.get_worksheet(0) # 0 é a primeira aba
+    return gspread.authorize(creds)
 
-sheet = conectar_gsheets()
+client = conectar_gsheets()
 
-@st.cache_data(ttl=10) # Cache curto para refletir edições rápido
-def carregar_dados():
-    data = sheet.get_all_records(expected_headers=[
-        "DEMANDA", "TIPO DEMANDA", "MÓDULO", "MANUAL", 
-        "DATA LINKAGEM", "CAPITULO", "MONTADORA", "VERSÃO"
-    ])
-    return pd.DataFrame(data)
+# Conexões das Planilhas
+try:
+    sheet_demandas = client.open_by_key("10F1PqOSXUj_tbN7qrm9qXKnKJQ7xcHUmtIOB72FpWaM").get_worksheet(0)
+    # Coloque aqui o ID da sua nova planilha de Modelos
+    sheet_modelos = client.open_by_key("1fYwQ2uoqXY6QJm0Kk9dW2vX0tjgbSuTeFNfONe8UWMs").get_worksheet(0) 
+except Exception as e:
+    st.error(f"Erro ao conectar nas planilhas: {e}")
 
-st.set_page_config(page_title="Controle de Demandas", layout="wide")
-st.title("📋 Controle de Demandas")
+# --- MENU DE NAVEGAÇÃO ---
+st.sidebar.title("🧭 Menu Principal")
+menu_principal = st.sidebar.selectbox("Selecione o Módulo:", ["Controle de Demandas", "Lista de Modelos"])
+
+# --- LÓGICA DE NAVEGAÇÃO ---
+if menu_principal == "Controle de Demandas":
+    st.title("📋 Controle de Demandas")
+    # Aqui você coloca todas as suas TABs atuais (tab1, tab2, tab3, tab4, tab5)
+    # Apenas lembre-se de usar 'sheet_demandas' ao invés de 'sheet' nos comandos.
+
+elif menu_principal == "Lista de Modelos":
+    st.title("📋 Lista de Modelos")
+    # Aqui vamos montar a estrutura da nova aba na próxima etapa
 
 # Definição das listas de opções para reuso nos formulários
 LISTA_TIPOS = ["NOVA", "CORREÇÃO", "UPGRADE"]
