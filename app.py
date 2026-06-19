@@ -61,13 +61,13 @@ with tab1:
             manual = st.selectbox("Manual", LISTA_MANUAIS)
         with col2:
             # 1. Captura o objeto date (st.date_input retorna um objeto date, não uma string)
-    data_obj = st.date_input("Data Linkagem")
+            data_obj = st.date_input("Data Linkagem")
     
-    # 2. Converte para o formato brasileiro
-    if data_obj:
-        data_linkagem = data_obj.strftime("%d/%m/%Y")
-    else:
-            data_linkagem = ""
+            # 2. Converte para o formato brasileiro
+                if data_obj:
+                    data_linkagem = data_obj.strftime("%d/%m/%Y")
+                else:
+                    data_linkagem = ""
             capitulo = st.text_input("Capítulo")
             montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
             versao = st.selectbox("Versão", LISTA_VERSOES)
