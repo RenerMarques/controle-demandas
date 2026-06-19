@@ -3,6 +3,9 @@ import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+import io
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
 # --- CONFIGURAÇÃO DA CONEXÃO ---
 def conectar_gsheets():
@@ -223,28 +226,37 @@ with tab5:
 
     # --- 2. GERADOR DE RELATÓRIO FILTRADO ---
     st.subheader("📥 Gerar e Exportar Relatório")
-    st.info("Utilize os filtros abaixo para selecionar quais dados deseja exportar.")
+    col_sel, formato_sel = st.columns(2)
+    with col_sel:
+        filtro_versao = st.selectbox("Versão:", ["Todas"] + df_geral["VERSÃO"].unique().tolist())
+        filtro_modulo = st.selectbox("Módulo:", ["Todos"] + df_geral["MÓDULO"].unique().tolist())
     
-    c1, c2 = st.columns(2)
-    with c1:
-        filtro_versao = st.selectbox("Filtrar por Versão para exportar:", ["Todas"] + df_geral["VERSÃO"].unique().tolist())
-    with c2:
-        filtro_modulo = st.selectbox("Filtrar por Módulo para exportar:", ["Todos"] + df_geral["MÓDULO"].unique().tolist())
-    
-    # Aplica os filtros na cópia do dataframe
+    with formato_sel:
+        formato = st.radio("Formato de exportação:", ["Excel (.xlsx)", "PDF (.pdf)"])
+
+    # Filtragem
     df_export = df_geral.copy()
-    if filtro_versao != "Todas":
-        df_export = df_export[df_export["VERSÃO"] == filtro_versao]
-    if filtro_modulo != "Todos":
-        df_export = df_export[df_export["MÓDULO"] == filtro_modulo]
-        
-    st.write(f"Relatório selecionado: {len(df_export)} registros.")
-    
-    # Botão de exportação
-    csv = df_export.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Exportar Dados Filtrados (CSV)",
-        data=csv,
-        file_name=f'relatorio_{filtro_versao}_{filtro_modulo}.csv'.replace("/", "-"),
-        mime='text/csv',
-    )
+    if filtro_versao != "Todas": df_export = df_export[df_export["VERSÃO"] == filtro_versao]
+    if filtro_modulo != "Todos": df_export = df_export[df_export["MÓDULO"] == filtro_modulo]
+
+    # Lógica de Exportação
+    if formato == "Excel (.xlsx)":
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df_export.to_excel(writer, index=False)
+        st.download_button("📥 Baixar Excel", data=buffer.getvalue(), file_name="relatorio.xlsx", mime="application/vnd.ms-excel")
+
+    elif formato == "PDF (.pdf)":
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        c.drawString(100, 800, "Relatório de Demandas")
+        y = 750
+        for i, row in df_export.iterrows():
+            texto = f"{row['DEMANDA']} - {row['MÓDULO']} - {row['VERSÃO']}"
+            c.drawString(100, y, texto)
+            y -= 20
+            if y < 50: # Nova página se necessário
+                c.showPage()
+                y = 800
+        c.save()
+        st.download_button("📥 Baixar PDF", data=buffer.getvalue(), file_name="relatorio.pdf", mime="application/pdf")
