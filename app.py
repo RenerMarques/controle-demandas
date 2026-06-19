@@ -157,48 +157,48 @@ with tab3:
 with tab4:
     st.header("🗑️ Excluir Demanda")
     
-    # Recarrega dados
-    df_temp = pd.DataFrame(sheet.get_all_records(expected_headers=["DEMANDA", "TIPO DEMANDA", "MÓDULO", "MANUAL", "DATA LINKAGEM", "CAPITULO", "MONTADORA", "VERSÃO"]))
-    
-    # Filtros Cascata
-    demandas_disponiveis = df_temp["DEMANDA"].unique().tolist()
-    demanda_selecionada = st.selectbox("1. Selecione a Demanda", [""] + demandas_disponiveis)
-    
-    if demanda_selecionada:
-        datas_disponiveis = df_temp[df_temp["DEMANDA"] == demanda_selecionada]["DATA LINKAGEM"].unique().tolist()
-        data_selecionada = st.selectbox("2. Selecione a Data", [""] + datas_disponiveis)
+    try: # <--- O TRY COMEÇA AQUI
+        # Recarrega dados
+        df_temp = pd.DataFrame(sheet.get_all_records(expected_headers=["DEMANDA", "TIPO DEMANDA", "MÓDULO", "MANUAL", "DATA LINKAGEM", "CAPITULO", "MONTADORA", "VERSÃO"]))
         
-        if data_selecionada:
-            capitulos_disponiveis = df_temp[
-                (df_temp["DEMANDA"] == demanda_selecionada) & 
-                (df_temp["DATA LINKAGEM"] == data_selecionada)
-            ]["CAPITULO"].unique().tolist()
+        # Filtros Cascata
+        demandas_disponiveis = df_temp["DEMANDA"].unique().tolist()
+        demanda_selecionada = st.selectbox("1. Selecione a Demanda", [""] + demandas_disponiveis)
+        
+        if demanda_selecionada:
+            datas_disponiveis = df_temp[df_temp["DEMANDA"] == demanda_selecionada]["DATA LINKAGEM"].unique().tolist()
+            data_selecionada = st.selectbox("2. Selecione a Data", [""] + datas_disponiveis)
             
-            capitulo_selecionado = st.selectbox("3. Selecione o Capítulo", [""] + capitulos_disponiveis)
-            
-            # --- O FORMULÁRIO DE CONFIRMAÇÃO ---
-            if capitulo_selecionado:
-                with st.form("confirmar_exclusao"):
-                    st.warning(f"Você tem certeza que deseja excluir a demanda: **{demanda_selecionada}**?")
-                    btn_excluir = st.form_submit_button("Confirmar e Excluir Definitivamente")
-                    
-                    if btn_excluir:
-                        # Identifica a linha
-                        filtro = (df_temp["DEMANDA"] == demanda_selecionada) & \
-                                 (df_temp["DATA LINKAGEM"] == data_selecionada) & \
-                                 (df_temp["CAPITULO"] == capitulo_selecionado)
+            if data_selecionada:
+                capitulos_disponiveis = df_temp[
+                    (df_temp["DEMANDA"] == demanda_selecionada) & 
+                    (df_temp["DATA LINKAGEM"] == data_selecionada)
+                ]["CAPITULO"].unique().tolist()
+                
+                capitulo_selecionado = st.selectbox("3. Selecione o Capítulo", [""] + capitulos_disponiveis)
+                
+                # --- O FORMULÁRIO DE CONFIRMAÇÃO ---
+                if capitulo_selecionado:
+                    with st.form("confirmar_exclusao"):
+                        st.warning(f"Você tem certeza que deseja excluir a demanda: **{demanda_selecionada}**?")
+                        btn_excluir = st.form_submit_button("Confirmar e Excluir Definitivamente")
                         
-                        resultado = df_temp[filtro]
-                        
-                        if not resultado.empty:
-                            linha_para_excluir = resultado.index[0] + 2
-                            sheet.delete_rows(linha_para_excluir)
-                            st.success("Demanda excluída com sucesso!")
-                            st.rerun() # Recarrega a página para atualizar os selects
-                        else:
-                            st.error("Erro: Registro não encontrado na planilha.")
+                        if btn_excluir:
+                            filtro = (df_temp["DEMANDA"] == demanda_selecionada) & \
+                                     (df_temp["DATA LINKAGEM"] == data_selecionada) & \
+                                     (df_temp["CAPITULO"] == capitulo_selecionado)
+                            
+                            resultado = df_temp[filtro]
+                            
+                            if not resultado.empty:
+                                linha_para_excluir = resultado.index[0] + 2
+                                sheet.delete_rows(linha_para_excluir)
+                                st.success("Demanda excluída com sucesso!")
+                                st.rerun() 
+                            else:
+                                st.error("Erro: Registro não encontrado na planilha.")
 
-    except Exception as e:
+    except Exception as e: # <--- O EXCEPT AGORA ESTÁ LIGADO AO TRY
         st.error(f"Erro ao carregar filtros: {e}")
 
 with tab5:
