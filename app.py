@@ -164,7 +164,7 @@ if escolha == "Lista de Modelos":
             st.subheader("Modelos por Montadora")
             st.bar_chart(df_mod_geral["MONTADORA"].value_counts())
 
-         st.divider()
+        st.divider()
 
         # --- 2. GERADOR DE RELATÓRIO FILTRADO ---
         st.subheader("📥 Gerar e Exportar Relatório de Modelos")
