@@ -46,9 +46,45 @@ st.sidebar.title("🧭 Menu Principal")
 escolha = st.sidebar.selectbox("Selecione o Módulo:", ["Controle de Demandas", "Lista de Modelos"])
 
 if escolha == "Lista de Modelos":
-    st.title("📋 Lista de Modelos")
-    # AQUI VOCÊ ADICIONA A LÓGICA DA LISTA DE MODELOS SEM AFETAR O RESTO
-    st.write("Funcionalidade de modelos em construção...")
+    # Criando as mesmas abas para o módulo de modelos
+    tab_m1, tab_m2, tab_m3, tab_m4, tab_m5 = st.tabs([
+        "➕ Adicionar", "🔍 Buscar", "📝 Editar", "🗑️ Excluir", "📊 Relatórios"
+    ])
+
+    with tab_m1:
+        st.subheader("Adicionar Novo Modelo")
+        with st.form("form_add_modelo", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                m_modulo = st.selectbox("Módulo", LISTA_MODULOS)
+                m_manual = st.selectbox("Manual", LISTA_MANUAIS)
+                m_capitulo = st.text_input("Capítulo")
+            with col2:
+                m_montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
+                m_modelo = st.text_input("Modelo")
+            
+            if st.form_submit_button("Salvar Modelo"):
+                sheet_modelos.insert_row([m_modulo, m_manual, m_capitulo, m_montadora, m_modelo], index=2)
+                st.success("Modelo salvo com sucesso!")
+                st.rerun()
+
+    with tab_m2:
+        st.subheader("🔍 Buscar Modelos")
+        # Aqui você insere a lógica de busca lendo o sheet_modelos
+        df_mod = pd.DataFrame(sheet_modelos.get_all_records())
+        st.dataframe(df_mod, use_container_width=True)
+
+    with tab_m3:
+        st.subheader("📝 Editar Modelos")
+        # Aqui você replica a lógica da tab3 usando as colunas da planilha de modelos
+
+    with tab_m4:
+        st.subheader("🗑️ Excluir Modelos")
+        # Aqui você replica a lógica da tab4
+
+    with tab_m5:
+        st.subheader("📊 Relatórios")
+        # Aqui você pode gerar estatísticas sobre os modelos cadastrados
 
 else:
     st.title("📋 Controle de Demandas")
