@@ -83,17 +83,25 @@ with tab2:
         
         # 1. Módulo
         mod_sel = st.sidebar.selectbox("Módulo", ["Todos"] + df["MÓDULO"].unique().tolist())
-        
-        # 2. Tipo Demanda (Depende do Módulo)
         df_f1 = df if mod_sel == "Todos" else df[df["MÓDULO"] == mod_sel]
-        tipo_sel = st.sidebar.selectbox("Tipo", ["Todos"] + df_f1["TIPO DEMANDA"].unique().tolist())
         
-        # 3. Demanda (Depende do Módulo e Tipo)
+        # 2. Tipo Demanda
+        tipo_sel = st.sidebar.selectbox("Tipo", ["Todos"] + df_f1["TIPO DEMANDA"].unique().tolist())
         df_f2 = df_f1 if tipo_sel == "Todos" else df_f1[df_f1["TIPO DEMANDA"] == tipo_sel]
-        dem_sel = st.sidebar.selectbox("Demanda", ["Todas"] + df_f2["DEMANDA"].unique().tolist())
+        
+        # 3. Montadora (NOVO)
+        mont_sel = st.sidebar.selectbox("Montadora", ["Todas"] + df_f2["MONTADORA"].unique().tolist())
+        df_f3 = df_f2 if mont_sel == "Todas" else df_f2[df_f2["MONTADORA"] == mont_sel]
+        
+        # 4. Manual (NOVO)
+        man_sel = st.sidebar.selectbox("Manual", ["Todos"] + df_f3["MANUAL"].unique().tolist())
+        df_f4 = df_f3 if man_sel == "Todos" else df_f3[df_f3["MANUAL"] == man_sel]
+        
+        # 5. Demanda
+        dem_sel = st.sidebar.selectbox("Demanda", ["Todas"] + df_f4["DEMANDA"].unique().tolist())
         
         # Aplicar filtros
-        final = df_f2 if dem_sel == "Todas" else df_f2[df_f2["DEMANDA"] == dem_sel]
+        final = df_f4 if dem_sel == "Todas" else df_f4[df_f4["DEMANDA"] == dem_sel]
         st.dataframe(final, use_container_width=True)
 
     else:
