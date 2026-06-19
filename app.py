@@ -152,7 +152,7 @@ if escolha == "Lista de Modelos":
                 st.rerun()
 
     with tab_m5:
-    st.header("📊 Relatórios e Exportação de Modelos")
+        st.header("📊 Relatórios e Exportação de Modelos")
         df_mod_geral = pd.DataFrame(sheet_modelos.get_all_records())
     
         # --- 1. MÉTRICAS SIMPLES ---
