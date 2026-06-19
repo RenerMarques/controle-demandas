@@ -64,27 +64,57 @@ if escolha == "Lista de Modelos":
                 m_modelo = st.text_input("Modelo")
             
             if st.form_submit_button("Salvar Modelo"):
+                # Insere na planilha de modelos (sheet_modelos)
                 sheet_modelos.insert_row([m_modulo, m_manual, m_capitulo, m_montadora, m_modelo], index=2)
                 st.success("Modelo salvo com sucesso!")
                 st.rerun()
 
     with tab_m2:
         st.subheader("🔍 Buscar Modelos")
-        # Aqui você insere a lógica de busca lendo o sheet_modelos
         df_mod = pd.DataFrame(sheet_modelos.get_all_records())
-        st.dataframe(df_mod, use_container_width=True)
+        # Filtro simples por Montadora
+        mont_s = st.selectbox("Filtrar por Montadora", ["Todas"] + df_mod["MONTADORA"].unique().tolist())
+        if mont_s != "Todas":
+            st.dataframe(df_mod[df_mod["MONTADORA"] == mont_s], use_container_width=True)
+        else:
+            st.dataframe(df_mod, use_container_width=True)
 
     with tab_m3:
-        st.subheader("📝 Editar Modelos")
-        # Aqui você replica a lógica da tab3 usando as colunas da planilha de modelos
+        st.subheader("📝 Editar Modelo")
+        df_mod = pd.DataFrame(sheet_modelos.get_all_records())
+        # Seleciona o modelo (vamos usar o campo "Modelo" como chave)
+        modelo_sel = st.selectbox("Selecione o Modelo para editar:", df_mod["MODELO"].tolist())
+        dados = df_mod[df_mod["MODELO"] == modelo_sel].iloc[0]
+        
+        with st.form("form_edit_m"):
+            n_mod = st.selectbox("Módulo", LISTA_MODULOS, index=LISTA_MODULOS.index(dados["MÓDULO"]))
+            n_man = st.selectbox("Manual", LISTA_MANUAIS, index=LISTA_MANUAIS.index(dados["MANUAL"]))
+            n_cap = st.text_input("Capítulo", value=dados["CAPITULO"])
+            n_mon = st.selectbox("Montadora", LISTA_MONTADORAS, index=LISTA_MONTADORAS.index(dados["MONTADORA"]))
+            n_model = st.text_input("Modelo", value=dados["MODELO"])
+            
+            if st.form_submit_button("Atualizar"):
+                cell = sheet_modelos.find(modelo_sel)
+                sheet_modelos.update(range_name=f"A{cell.row}:E{cell.row}", values=[[n_mod, n_man, n_cap, n_mon, n_model]])
+                st.success("Atualizado!")
+                st.rerun()
 
     with tab_m4:
-        st.subheader("🗑️ Excluir Modelos")
-        # Aqui você replica a lógica da tab4
+        st.subheader("🗑️ Excluir Modelo")
+        df_mod = pd.DataFrame(sheet_modelos.get_all_records())
+        m_del = st.selectbox("Selecione o Modelo a excluir", [""] + df_mod["MODELO"].tolist())
+        if m_del:
+            if st.button("Confirmar Exclusão"):
+                cell = sheet_modelos.find(m_del)
+                sheet_modelos.delete_rows(cell.row)
+                st.success("Excluído!")
+                st.rerun()
 
     with tab_m5:
-        st.subheader("📊 Relatórios")
-        # Aqui você pode gerar estatísticas sobre os modelos cadastrados
+        st.subheader("📊 Relatórios de Modelos")
+        df_mod = pd.DataFrame(sheet_modelos.get_all_records())
+        st.write("Total de modelos:", len(df_mod))
+        st.bar_chart(df_mod["MÓDULO"].value_counts())
 
 else:
     st.title("📋 Controle de Demandas")
