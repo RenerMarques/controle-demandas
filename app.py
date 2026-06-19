@@ -70,16 +70,16 @@ if escolha == "Lista de Modelos":
                 st.rerun()
 
     with tab_m2:
-    st.subheader("🔍 Busca Avançada de Modelos")
-    df_mod = pd.DataFrame(sheet_modelos.get_all_records())
+        st.subheader("🔍 Busca Avançada de Modelos")
+        df_mod = pd.DataFrame(sheet_modelos.get_all_records())
     
-    # Escolha do método
-    modo_busca_m = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], key="radio_mod", horizontal=True)
+        # Escolha do método
+        modo_busca_m = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], key="radio_mod", horizontal=True)
 
-    if modo_busca_m == "Filtros em Cascata":
+        if modo_busca_m == "Filtros em Cascata":
         col_a, col_b, col_c = st.columns(3)
         
-        with col_a:
+            with col_a:
             # 1. Módulo
             mod_sel = st.selectbox("Módulo", ["Todos"] + df_mod["MÓDULO"].unique().tolist())
             df_f1 = df_mod if mod_sel == "Todos" else df_mod[df_mod["MÓDULO"] == mod_sel]
@@ -88,7 +88,7 @@ if escolha == "Lista de Modelos":
             man_sel = st.selectbox("Manual", ["Todos"] + df_f1["MANUAL"].unique().tolist())
             df_f2 = df_f1 if man_sel == "Todos" else df_f1[df_f1["MANUAL"] == man_sel]
             
-        with col_b:
+            with col_b:
             # 3. Montadora
             mont_sel = st.selectbox("Montadora", ["Todas"] + df_f2["MONTADORA"].unique().tolist())
             df_f3 = df_f2 if mont_sel == "Todas" else df_f2[df_f2["MONTADORA"] == mont_sel]
@@ -97,28 +97,28 @@ if escolha == "Lista de Modelos":
             cap_sel = st.selectbox("Capítulo", ["Todos"] + df_f3["CAPITULO"].unique().tolist())
             df_f4 = df_f3 if cap_sel == "Todos" else df_f3[df_f3["CAPITULO"] == cap_sel]
             
-        with col_c:
+            with col_c:
             # 5. Modelo
             model_sel = st.selectbox("Modelo", ["Todos"] + df_f4["MODELO"].unique().tolist())
             final_mod = df_f4 if model_sel == "Todos" else df_f4[df_f4["MODELO"] == model_sel]
             
-        st.divider()
-        st.dataframe(final_mod, use_container_width=True)
+            st.divider()
+            st.dataframe(final_mod, use_container_width=True)
 
-    else:
-        # Busca por Campo Específico
-        col_1, col_2 = st.columns(2)
-        with col_1:
-            coluna_alvo = st.selectbox("Selecione o campo:", df_mod.columns.tolist(), key="col_mod")
-        with col_2:
-            valor_busca = st.text_input("Digite o valor para busca:", key="val_mod")
-        
-        if valor_busca:
-            resultado_mod = df_mod[df_mod[coluna_alvo].astype(str).str.contains(valor_busca, case=False)]
-            st.write(f"Resultados encontrados:")
-            st.dataframe(resultado_mod, use_container_width=True)
         else:
-            st.info("Selecione o campo e digite o valor acima para iniciar a busca.")
+            # Busca por Campo Específico
+            col_1, col_2 = st.columns(2)
+            with col_1:
+                coluna_alvo = st.selectbox("Selecione o campo:", df_mod.columns.tolist(), key="col_mod")
+            with col_2:
+                valor_busca = st.text_input("Digite o valor para busca:", key="val_mod")
+        
+            if valor_busca:
+                resultado_mod = df_mod[df_mod[coluna_alvo].astype(str).str.contains(valor_busca, case=False)]
+                st.write(f"Resultados encontrados:")
+                st.dataframe(resultado_mod, use_container_width=True)
+            else:
+                st.info("Selecione o campo e digite o valor acima para iniciar a busca.")
 
     with tab_m3:
         st.subheader("📝 Editar Modelo")
