@@ -39,7 +39,13 @@ LISTA_MONTADORAS = ["AGRALE", "ALFA ROMEO", "AUDI", "BMW", "BYD", "CHERY", "CHEV
 LISTA_VERSOES = ["2024/1", "2024/2", "2024/3", "2025/1", "2025/2", "2025/3", "2026/1", "2026/2", "2026/3", "2027/1", "2027/2", "2027/3"]
 
 # --- INTERFACE POR ABAS ---
-tab1, tab2, tab3, tab4 = st.tabs(["➕ Adicionar", "🔍 Buscar", "📝 Editar", "🗑️ Excluir"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "➕ Adicionar", 
+    "🔍 Buscar", 
+    "📝 Editar", 
+    "🗑️ Excluir", 
+    "📊 Visão Geral"
+])
 
 with tab1:
     st.subheader("Nova Demanda")
@@ -189,4 +195,33 @@ with tab4:
 
     except Exception as e:
         st.error(f"Erro ao carregar filtros: {e}")
-            
+
+with tab5:
+    st.subheader("📊 Visão Geral e Indicadores")
+    df = carregar_dados() # Usa o cache, então é rápido
+    
+    # --- 1. Métricas de Topo (KPIs) ---
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total de Demandas", len(df))
+    col2.metric("Módulos Ativos", df["MÓDULO"].nunique())
+    col3.metric("Montadoras Cadastradas", df["MONTADORA"].nunique())
+    
+    st.markdown("---")
+    
+    # --- 2. Gráficos de Distribuição ---
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        st.write("### Demandas por Módulo")
+        # Conta quantas vezes cada módulo aparece
+        contagem_modulo = df["MÓDULO"].value_counts()
+        st.bar_chart(contagem_modulo)
+        
+    with c2:
+        st.write("### Demandas por Tipo")
+        contagem_tipo = df["TIPO DEMANDA"].value_counts()
+        st.bar_chart(contagem_tipo)
+
+    # --- 3. Guia de Status de Dados ---
+    with st.expander("Ver lista resumida de colunas e tipos"):
+        st.write(df.dtypes)            
