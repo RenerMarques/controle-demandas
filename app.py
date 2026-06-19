@@ -60,7 +60,14 @@ with tab1:
             modulo = st.selectbox("Módulo", LISTA_MODULOS)
             manual = st.selectbox("Manual", LISTA_MANUAIS)
         with col2:
-            data_linkagem = str(st.date_input("Data Linkagem"))
+            # 1. Captura o objeto date (st.date_input retorna um objeto date, não uma string)
+    data_obj = st.date_input("Data Linkagem")
+    
+    # 2. Converte para o formato brasileiro
+    if data_obj:
+        data_linkagem = data_obj.strftime("%d/%m/%Y")
+    else:
+            data_linkagem = ""
             capitulo = st.text_input("Capítulo")
             montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
             versao = st.selectbox("Versão", LISTA_VERSOES)
