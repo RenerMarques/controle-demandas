@@ -44,7 +44,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🔍 Buscar", 
     "📝 Editar", 
     "🗑️ Excluir", 
-    "📊 Visão Geral"
+    "📊 Relatórios"
 ])
 
 with tab1:
@@ -197,31 +197,49 @@ with tab4:
         st.error(f"Erro ao carregar filtros: {e}")
 
 with tab5:
-    st.subheader("📊 Visão Geral e Indicadores")
-    df = carregar_dados() # Usa o cache, então é rápido
+    st.header("📊 Relatórios e Exportação")
+    df_geral = carregar_dados()
     
-    # --- 1. Métricas de Topo (KPIs) ---
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total de Demandas", len(df))
-    col2.metric("Módulos Ativos", df["MÓDULO"].nunique())
-    col3.metric("Montadoras Cadastradas", df["MONTADORA"].nunique())
+    # --- 1. MÉTRICAS E DISTRIBUIÇÃO ---
+    col1, col2 = st.columns(2)
     
-    st.markdown("---")
-    
-    # --- 2. Gráficos de Distribuição ---
-    c1, c2 = st.columns(2)
-    
-    with c1:
-        st.write("### Demandas por Módulo")
-        # Conta quantas vezes cada módulo aparece
-        contagem_modulo = df["MÓDULO"].value_counts()
-        st.bar_chart(contagem_modulo)
+    with col1:
+        st.subheader("Por Versão")
+        # Conta as demandas por versão
+        contagem_versao = df_geral["VERSÃO"].value_counts().sort_index()
+        st.bar_chart(contagem_versao)
         
-    with c2:
-        st.write("### Demandas por Tipo")
-        contagem_tipo = df["TIPO DEMANDA"].value_counts()
-        st.bar_chart(contagem_tipo)
+    with col2:
+        st.subheader("Por Módulo")
+        contagem_modulo = df_geral["MÓDULO"].value_counts()
+        st.bar_chart(contagem_modulo)
 
-    # --- 3. Guia de Status de Dados ---
-    with st.expander("Ver lista resumida de colunas e tipos"):
-        st.write(df.dtypes)            
+    st.divider()
+
+    # --- 2. GERADOR DE RELATÓRIO FILTRADO ---
+    st.subheader("📥 Gerar e Exportar Relatório")
+    st.info("Utilize os filtros abaixo para selecionar quais dados deseja exportar.")
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        filtro_versao = st.selectbox("Filtrar por Versão para exportar:", ["Todas"] + df_geral["VERSÃO"].unique().tolist())
+    with c2:
+        filtro_modulo = st.selectbox("Filtrar por Módulo para exportar:", ["Todos"] + df_geral["MÓDULO"].unique().tolist())
+    
+    # Aplica os filtros na cópia do dataframe
+    df_export = df_geral.copy()
+    if filtro_versao != "Todas":
+        df_export = df_export[df_export["VERSÃO"] == filtro_versao]
+    if filtro_modulo != "Todos":
+        df_export = df_export[df_export["MÓDULO"] == filtro_modulo]
+        
+    st.write(f"Relatório selecionado: {len(df_export)} registros.")
+    
+    # Botão de exportação
+    csv = df_export.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Exportar Dados Filtrados (CSV)",
+        data=csv,
+        file_name=f'relatorio_{filtro_versao}_{filtro_modulo}.csv'.replace("/", "-"),
+        mime='text/csv',
+    )
