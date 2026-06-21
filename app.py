@@ -14,7 +14,9 @@ def carregar_dados_demandas():
     return pd.DataFrame(sheet_demandas.get_all_records())
 
 @st.cache_data(ttl=3600)
-def carregar_dados_modelos():
+def carregar_dados_sheet():
+    # Certifique-se de que 'sheet_modelos' está acessível aqui
+    # Se sheet_modelos for uma variável global, isso funcionará
     return pd.DataFrame(sheet_modelos.get_all_records())
 
 # --- CONFIGURAÇÃO DAS CONEXÕES ---
