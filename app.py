@@ -46,6 +46,8 @@ st.sidebar.title("🧭 Menu Principal")
 escolha = st.sidebar.selectbox("Selecione o Módulo:", ["Controle de Demandas", "Lista de Modelos"])
 
 if escolha == "Lista de Modelos":
+    # CARREGUE APENAS UMA VEZ AQUI
+    df_mod = carregar_dados_sheet(sheet_modelos)
     # Criando as mesmas abas para o módulo de modelos
     tab_m1, tab_m2, tab_m3, tab_m4, tab_m5 = st.tabs([
         "➕ Adicionar", "🔍 Buscar", "📝 Editar", "🗑️ Excluir", "📊 Relatórios"
@@ -94,7 +96,7 @@ if escolha == "Lista de Modelos":
 
     with tab_m2:
         st.subheader("🔍 Busca Avançada de Modelos")
-        df_mod = pd.DataFrame(sheet_modelos.get_all_records())
+        st.dataframe(df_mod)
         
         modo_busca_m = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], key="radio_mod", horizontal=True)
 
