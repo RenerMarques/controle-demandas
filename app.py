@@ -9,17 +9,18 @@ from reportlab.pdfgen import canvas
 
 st.set_page_config(page_title="Gestão Integrada", layout="wide")
 
+# 1. DEFINIÇÃO DAS FUNÇÕES DE CACHE (NO TOPO)
 @st.cache_data(ttl=3600)
 def carregar_dados_demandas():
+    # Esta função precisa ter acesso à variável 'sheet_demandas'
     return pd.DataFrame(sheet_demandas.get_all_records())
 
 @st.cache_data(ttl=3600)
-def carregar_dados_sheet():
-    # Certifique-se de que 'sheet_modelos' está acessível aqui
-    # Se sheet_modelos for uma variável global, isso funcionará
+def carregar_dados_modelos():
+    # Esta função precisa ter acesso à variável 'sheet_modelos'
     return pd.DataFrame(sheet_modelos.get_all_records())
 
-# --- CONFIGURAÇÃO DAS CONEXÕES ---
+# 2. CONFIGURAÇÃO DE CONEXÃO
 @st.cache_resource
 def conectar_gsheets():
     creds_dict = st.secrets["gcp_service_account"]
@@ -31,13 +32,9 @@ def conectar_gsheets():
 
 client = conectar_gsheets()
 
-# Conexões
-try:
-    sheet_demandas = client.open_by_key("10F1PqOSXUj_tbN7qrm9qXKnKJQ7xcHUmtIOB72FpWaM").get_worksheet(0)
-    sheet_modelos = client.open_by_key("1fYwQ2uoqXY6QJm0Kk9dW2vX0tjgbSuTeFNfONe8UWMs").get_worksheet(0)
-    sheet = sheet_demandas # Referência que seu código original espera
-except Exception as e:
-    st.error(f"Erro ao conectar nas planilhas: {e}")
+# Inicialize as planilhas aqui, ANTES de qualquer chamada às funções
+sheet_demandas = client.open_by_key("10F1PqOSXUj_tbN7qrm9qXKnKJQ7xcHUmtIOB72FpWaM").get_worksheet(0)
+sheet_modelos = client.open_by_key("1fYwQ2uoqXY6QJm0Kk9dW2vX0tjgbSuTeFNfONe8UWMs").get_worksheet(0)
 
 # Definição das listas
 LISTA_TIPOS = ["NOVA", "CORREÇÃO", "UPGRADE"]
