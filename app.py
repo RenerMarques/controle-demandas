@@ -86,42 +86,37 @@ if escolha == "Lista de Modelos":
                     st.rerun()
 
         else:
-            st.info("O arquivo deve ter exatamente estas colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO")
-            uploaded_file = st.file_uploader("Escolha seu arquivo Excel", type=["xlsx"])
+            st.info("O arquivo Excel deve conter as colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO")
+            uploaded_file = st.file_uploader("Escolha o arquivo Excel", type=["xlsx"])
             
             if uploaded_file is not None:
-                try:
-                    # Lê o arquivo
-                    df_upload = pd.read_excel(uploaded_file)
-                    
-                    # --- VALIDAÇÃO DE COLUNAS ---
-                    colunas_esperadas = ["MÓDULO", "MANUAL", "CAPITULO", "MONTADORA", "MODELO"]
-                    # Verifica se as colunas batem (ignora maiúsculas/minúsculas)
-                    df_upload.columns = [c.upper() for c in df_upload.columns]
-                    
-                    if not all(col in df_upload.columns for col in colunas_esperadas):
-                        st.error(f"Erro: As colunas do seu arquivo não conferem. Esperado: {colunas_esperadas}")
-                    else:
-                        # Reordena o DF para garantir a ordem certa
-                        df_upload = df_upload[colunas_esperadas]
-                        
-                        st.write("Pré-visualização dos dados que serão enviados:")
-                        st.dataframe(df_upload.head())
-                        
-                        if st.button("Confirmar Importação em Lote"):
-                            # Converte apenas os dados (sem cabeçalho) para lista
-                            dados_para_inserir = df_upload.values.tolist()
+                df_up = pd.read_excel(uploaded_file)
+                # Normaliza colunas para evitar erros de acentuação/case
+                df_up.columns = [str(c).upper().strip() for c in df_up.columns]
+                
+                st.write("Dados detectados:")
+                st.dataframe(df_up.head())
+                
+                if st.button("Confirmar Importação em Lote"):
+                    with st.spinner("Enviando dados para a planilha..."):
+                        try:
+                            # 1. Limpa valores nulos que podem quebrar a API
+                            df_up = df_up.fillna("")
                             
-                            # Tenta inserir
-                            sheet_modelos.append_rows(dados_para_inserir)
+                            # 2. Converte para lista de listas (formato que o gspread exige)
+                            # to_records(index=False).tolist() é mais seguro que .values.tolist()
+                            dados_formatados = df_up.to_records(index=False).tolist()
                             
-                            st.success(f"Sucesso! {len(dados_para_inserir)} modelos adicionados.")
-                            # Força a atualização dos dados em cache para aparecer na busca
-                            st.cache_data.clear() 
+                            # 3. Faz o append
+                            sheet_modelos.append_rows(dados_formatados)
+                            
+                            # 4. Limpa cache e força o recarregamento
+                            st.cache_data.clear()
+                            st.success(f"Sucesso! {len(dados_formatados)} linhas adicionadas.")
+                            st.balloons()
                             st.rerun()
-                            
-                except Exception as e:
-                    st.error(f"Ocorreu um erro técnico: {e}")
+                        except Exception as e:
+                            st.error(f"Erro crítico na API do Google: {e}")
 
     with tab_m2:
         st.subheader("🔍 Busca Avançada de Modelos")
