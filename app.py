@@ -59,7 +59,7 @@ escolha = st.sidebar.selectbox("Selecione o Módulo:", ["Controle de Demandas", 
 
 if escolha == "Lista de Modelos":
     # Carregamos UMA VEZ por sessão
-    df_mod = carregar_dados_sheet()
+    df_mod = carregar_dados_modelos()
 
     # Criando as mesmas abas para o módulo de modelos
     tab_m1, tab_m2, tab_m3, tab_m4, tab_m5 = st.tabs([
