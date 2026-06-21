@@ -9,6 +9,14 @@ from reportlab.pdfgen import canvas
 
 st.set_page_config(page_title="Gestão Integrada", layout="wide")
 
+@st.cache_data(ttl=3600)
+def carregar_dados_sheet():
+    try:
+        return pd.DataFrame(sheet_modelos.get_all_records())
+    except Exception as e:
+        st.error("Limite da API excedido. Aguarde 1 minuto e recarregue.")
+        return pd.DataFrame()
+
 # --- CONFIGURAÇÃO DAS CONEXÕES ---
 @st.cache_resource
 def conectar_gsheets():
@@ -46,6 +54,9 @@ st.sidebar.title("🧭 Menu Principal")
 escolha = st.sidebar.selectbox("Selecione o Módulo:", ["Controle de Demandas", "Lista de Modelos"])
 
 if escolha == "Lista de Modelos":
+    # Carregamos UMA VEZ por sessão
+    df_mod = carregar_dados_sheet()
+
     # Criando as mesmas abas para o módulo de modelos
     tab_m1, tab_m2, tab_m3, tab_m4, tab_m5 = st.tabs([
         "➕ Adicionar", "🔍 Buscar", "📝 Editar", "🗑️ Excluir", "📊 Relatórios"
@@ -70,7 +81,8 @@ if escolha == "Lista de Modelos":
                 
                 if st.form_submit_button("Salvar Modelo"):
                     sheet_modelos.insert_row([m_modulo, m_manual, m_capitulo, m_montadora, m_modelo], index=2)
-                    st.success("Modelo salvo com sucesso!")
+                    st.cache_data.clear() # Limpa o cache para atualizar a lista
+                    st.success("Modelo salvo!")
                     st.rerun()
 
         else:
