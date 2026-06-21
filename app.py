@@ -11,14 +11,19 @@ st.set_page_config(page_title="Gestão Integrada", layout="wide")
 
 # 1. DEFINIÇÃO DAS FUNÇÕES DE CACHE (NO TOPO)
 @st.cache_data(ttl=3600)
+def carregar_dados_modelos():
+    # Acessa a variável global de conexão
+    # Se 'sheet_modelos' não estiver pronta, o erro será capturado
+    try:
+        return pd.DataFrame(sheet_modelos.get_all_records())
+    except NameError:
+        st.error("Erro: A conexão com a planilha não foi inicializada corretamente.")
+        return pd.DataFrame()
+
+@st.cache_data(ttl=3600)
 def carregar_dados_demandas():
     # Esta função precisa ter acesso à variável 'sheet_demandas'
     return pd.DataFrame(sheet_demandas.get_all_records())
-
-@st.cache_data(ttl=3600)
-def carregar_dados_modelos():
-    # Esta função precisa ter acesso à variável 'sheet_modelos'
-    return pd.DataFrame(sheet_modelos.get_all_records())
 
 # 2. CONFIGURAÇÃO DE CONEXÃO
 @st.cache_resource
