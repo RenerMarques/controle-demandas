@@ -74,23 +74,42 @@ if escolha == "Lista de Modelos":
                     st.rerun()
 
         else:
-            st.info("O arquivo deve conter as colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO")
+            st.info("O arquivo deve ter exatamente estas colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO")
             uploaded_file = st.file_uploader("Escolha seu arquivo Excel", type=["xlsx"])
             
             if uploaded_file is not None:
-                df_upload = pd.read_excel(uploaded_file)
-                st.write("Pré-visualização dos dados que serão enviados:")
-                st.dataframe(df_upload.head())
-                
-                if st.button("Confirmar Importação em Lote"):
-                    try:
-                        # Converte o df para lista de listas para o gspread
-                        dados_para_inserir = df_upload.values.tolist()
-                        sheet_modelos.append_rows(dados_para_inserir)
-                        st.success(f"Sucesso! {len(dados_para_inserir)} modelos foram adicionados.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Erro ao processar arquivo: {e}")
+                try:
+                    # Lê o arquivo
+                    df_upload = pd.read_excel(uploaded_file)
+                    
+                    # --- VALIDAÇÃO DE COLUNAS ---
+                    colunas_esperadas = ["MÓDULO", "MANUAL", "CAPITULO", "MONTADORA", "MODELO"]
+                    # Verifica se as colunas batem (ignora maiúsculas/minúsculas)
+                    df_upload.columns = [c.upper() for c in df_upload.columns]
+                    
+                    if not all(col in df_upload.columns for col in colunas_esperadas):
+                        st.error(f"Erro: As colunas do seu arquivo não conferem. Esperado: {colunas_esperadas}")
+                    else:
+                        # Reordena o DF para garantir a ordem certa
+                        df_upload = df_upload[colunas_esperadas]
+                        
+                        st.write("Pré-visualização dos dados que serão enviados:")
+                        st.dataframe(df_upload.head())
+                        
+                        if st.button("Confirmar Importação em Lote"):
+                            # Converte apenas os dados (sem cabeçalho) para lista
+                            dados_para_inserir = df_upload.values.tolist()
+                            
+                            # Tenta inserir
+                            sheet_modelos.append_rows(dados_para_inserir)
+                            
+                            st.success(f"Sucesso! {len(dados_para_inserir)} modelos adicionados.")
+                            # Força a atualização dos dados em cache para aparecer na busca
+                            st.cache_data.clear() 
+                            st.rerun()
+                            
+                except Exception as e:
+                    st.error(f"Ocorreu um erro técnico: {e}")
 
     with tab_m2:
         st.subheader("🔍 Busca Avançada de Modelos")
