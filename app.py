@@ -10,12 +10,12 @@ from reportlab.pdfgen import canvas
 st.set_page_config(page_title="Gestão Integrada", layout="wide")
 
 @st.cache_data(ttl=3600)
-def carregar_dados_sheet():
-    try:
-        return pd.DataFrame(sheet_modelos.get_all_records())
-    except Exception as e:
-        st.error("Limite da API excedido. Aguarde 1 minuto e recarregue.")
-        return pd.DataFrame()
+def carregar_dados_demandas():
+    return pd.DataFrame(sheet_demandas.get_all_records())
+
+@st.cache_data(ttl=3600)
+def carregar_dados_modelos():
+    return pd.DataFrame(sheet_modelos.get_all_records())
 
 # --- CONFIGURAÇÃO DAS CONEXÕES ---
 @st.cache_resource
