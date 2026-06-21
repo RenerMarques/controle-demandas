@@ -7,6 +7,11 @@ import io
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
+# --- DEFINA A FUNÇÃO AQUI NO TOPO ---
+@st.cache_data(ttl=600)
+def carregar_dados_sheet(sheet):
+    return pd.DataFrame(sheet.get_all_records())
+
 st.set_page_config(page_title="Gestão Integrada", layout="wide")
 
 # --- CONFIGURAÇÃO DAS CONEXÕES ---
