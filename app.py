@@ -7,11 +7,6 @@ import io
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
-# --- DEFINA A FUNÇÃO AQUI NO TOPO ---
-@st.cache_data(ttl=600)
-def carregar_dados_sheet(sheet):
-    return pd.DataFrame(sheet.get_all_records())
-
 st.set_page_config(page_title="Gestão Integrada", layout="wide")
 
 # --- CONFIGURAÇÃO DAS CONEXÕES ---
@@ -51,8 +46,6 @@ st.sidebar.title("🧭 Menu Principal")
 escolha = st.sidebar.selectbox("Selecione o Módulo:", ["Controle de Demandas", "Lista de Modelos"])
 
 if escolha == "Lista de Modelos":
-    # CARREGUE APENAS UMA VEZ AQUI
-    df_mod = carregar_dados_sheet(sheet_modelos)
     # Criando as mesmas abas para o módulo de modelos
     tab_m1, tab_m2, tab_m3, tab_m4, tab_m5 = st.tabs([
         "➕ Adicionar", "🔍 Buscar", "📝 Editar", "🗑️ Excluir", "📊 Relatórios"
@@ -101,7 +94,7 @@ if escolha == "Lista de Modelos":
 
     with tab_m2:
         st.subheader("🔍 Busca Avançada de Modelos")
-        st.dataframe(df_mod)
+        df_mod = pd.DataFrame(sheet_modelos.get_all_records())
         
         modo_busca_m = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], key="radio_mod", horizontal=True)
 
