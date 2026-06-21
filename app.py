@@ -116,7 +116,7 @@ if escolha == "Lista de Modelos":
 
     with tab_m2:
         st.subheader("🔍 Busca Avançada de Modelos")
-        df_mod = pd.DataFrame(sheet_modelos.get_all_records())
+        df_mod = carregar_dados_modelos()
         
         modo_busca_m = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], key="radio_mod", horizontal=True)
 
@@ -161,7 +161,7 @@ if escolha == "Lista de Modelos":
 
     with tab_m3:
         st.subheader("📝 Editar Modelo")
-        df_mod = pd.DataFrame(sheet_modelos.get_all_records())
+        df_mod = carregar_dados_modelos()
         modelo_sel = st.selectbox("Selecione o Modelo para editar:", df_mod["MODELO"].tolist())
         dados = df_mod[df_mod["MODELO"] == modelo_sel].iloc[0]
         with st.form("form_edit_m"):
@@ -178,7 +178,7 @@ if escolha == "Lista de Modelos":
 
     with tab_m4:
         st.subheader("🗑️ Excluir Modelo")
-        df_mod = pd.DataFrame(sheet_modelos.get_all_records())
+        df_mod = carregar_dados_modelos()
         m_del = st.selectbox("Selecione o Modelo a excluir", [""] + df_mod["MODELO"].tolist())
         if m_del:
             if st.button("Confirmar Exclusão"):
@@ -190,7 +190,7 @@ if escolha == "Lista de Modelos":
     with tab_m5:
         st.header("📊 Relatórios Detalhados")
         # Carrega os dados uma vez para o relatório
-        df_mod_geral = pd.DataFrame(sheet_modelos.get_all_records())
+        df_mod = carregar_dados_modelos()
         
         # --- 1. FILTROS DINÂMICOS ---
         st.subheader("Filtros de Visualização e Exportação")
