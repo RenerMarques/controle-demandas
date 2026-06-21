@@ -52,21 +52,45 @@ if escolha == "Lista de Modelos":
     ])
 
     with tab_m1:
-        st.subheader("Adicionar Novo Modelo")
-        with st.form("form_add_modelo", clear_on_submit=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                m_modulo = st.selectbox("Módulo", LISTA_MODULOS)
-                m_manual = st.selectbox("Manual", LISTA_MANUAIS)
-                m_capitulo = st.text_input("Capítulo")
-            with col2:
-                m_montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
-                m_modelo = st.text_input("Modelo")
+        st.subheader("➕ Adicionar Modelos")
+        
+        # Escolha entre manual ou lote
+        modo_add = st.radio("Método de cadastro:", ["Manual", "Upload em Lote (Excel)"], horizontal=True)
+
+        if modo_add == "Manual":
+            with st.form("form_add_modelo", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    m_modulo = st.selectbox("Módulo", LISTA_MODULOS)
+                    m_manual = st.selectbox("Manual", LISTA_MANUAIS)
+                    m_capitulo = st.text_input("Capítulo")
+                with col2:
+                    m_montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
+                    m_modelo = st.text_input("Modelo")
+                
+                if st.form_submit_button("Salvar Modelo"):
+                    sheet_modelos.insert_row([m_modulo, m_manual, m_capitulo, m_montadora, m_modelo], index=2)
+                    st.success("Modelo salvo com sucesso!")
+                    st.rerun()
+
+        else:
+            st.info("O arquivo deve conter as colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO")
+            uploaded_file = st.file_uploader("Escolha seu arquivo Excel", type=["xlsx"])
             
-            if st.form_submit_button("Salvar Modelo"):
-                sheet_modelos.insert_row([m_modulo, m_manual, m_capitulo, m_montadora, m_modelo], index=2)
-                st.success("Modelo salvo com sucesso!")
-                st.rerun()
+            if uploaded_file is not None:
+                df_upload = pd.read_excel(uploaded_file)
+                st.write("Pré-visualização dos dados que serão enviados:")
+                st.dataframe(df_upload.head())
+                
+                if st.button("Confirmar Importação em Lote"):
+                    try:
+                        # Converte o df para lista de listas para o gspread
+                        dados_para_inserir = df_upload.values.tolist()
+                        sheet_modelos.append_rows(dados_para_inserir)
+                        st.success(f"Sucesso! {len(dados_para_inserir)} modelos foram adicionados.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao processar arquivo: {e}")
 
     with tab_m2:
         st.subheader("🔍 Busca Avançada de Modelos")
