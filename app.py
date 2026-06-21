@@ -194,7 +194,7 @@ if escolha == "Lista de Modelos":
     with tab_m5:
         st.header("📊 Relatórios Detalhados")
         # Carrega os dados uma vez para o relatório
-        df_mod = carregar_dados_modelos()
+        df_mod_geral = carregar_dados_modelos()
         
         # --- 1. FILTROS DINÂMICOS ---
         st.subheader("Filtros de Visualização e Exportação")
