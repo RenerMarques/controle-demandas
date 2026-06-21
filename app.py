@@ -98,25 +98,21 @@ if escolha == "Lista de Modelos":
                 st.dataframe(df_up.head())
                 
                 if st.button("Confirmar Importação em Lote"):
-                    with st.spinner("Enviando dados para a planilha..."):
-                        try:
-                            # 1. Limpa valores nulos que podem quebrar a API
-                            df_up = df_up.fillna("")
-                            
-                            # 2. Converte para lista de listas (formato que o gspread exige)
-                            # to_records(index=False).tolist() é mais seguro que .values.tolist()
-                            dados_formatados = df_up.to_records(index=False).tolist()
-                            
-                            # 3. Faz o append
-                            sheet_modelos.append_rows(dados_formatados)
-                            
-                            # 4. Limpa cache e força o recarregamento
-                            st.cache_data.clear()
-                            st.success(f"Sucesso! {len(dados_formatados)} linhas adicionadas.")
-                            st.balloons()
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Erro crítico na API do Google: {e}")
+                            try:
+                                # Prepara os dados (limpeza)
+                                df_up = df_up.fillna("")
+                                dados_formatados = df_up.values.tolist()
+                                
+                                # Em vez de append_rows (que vai para o fim),
+                                # usamos insert_rows para colocar logo após o cabeçalho (linha 2)
+                                sheet_modelos.insert_rows(dados_formatados, row=2)
+                                
+                                st.cache_data.clear()
+                                st.success(f"Sucesso! {len(dados_formatados)} modelos adicionados no topo.")
+                                st.rerun()
+                                
+                            except Exception as e:
+                                st.error(f"Erro ao inserir no topo: {e}")
 
     with tab_m2:
         st.subheader("🔍 Busca Avançada de Modelos")
