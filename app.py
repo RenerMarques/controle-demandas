@@ -2,63 +2,62 @@ import streamlit as st
 from config import carregar_dados_demandas, carregar_dados_modelos
 from datetime import datetime
 
-# --- CONFIGURAÇÃO CLEAN ---
-st.set_page_config(
-    page_title="Gestão Integrada",
-    layout="wide"
-)
-
-# Estilização minimalista (Sem imagens, sem borrão, apenas foco)
-st.markdown("""
-    <style>
-        .main { background-color: #f8f9fa; }
-        .stMetric { background-color: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
-        h1 { color: #343a40; font-weight: 600; }
-        h3 { color: #495057; }
-    </style>
-    """, unsafe_allow_html=True)
+st.set_page_config(page_title="Gestão Integrada", layout="wide")
 
 # --- CABEÇALHO ---
 st.title("Sistema de Gestão")
-st.caption(f"Painel administrativo atualizado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-st.divider()
+st.markdown("Bem-vindo ao painel central. Selecione um módulo abaixo para começar.")
 
-# --- MÉTRICAS ---
+# --- MÉTRICAS (Uso do componente nativo - Alta legibilidade) ---
 df_d = carregar_dados_demandas()
 df_m = carregar_dados_modelos()
 
-c1, c2, c3 = st.columns(3)
-c1.metric("Demandas Cadastradas", len(df_d))
-c2.metric("Modelos na Base", len(df_m))
-c3.metric("Status do Sistema", "Online")
+st.subheader("Visão Geral")
+col1, col2, col3 = st.columns(3)
+col1.metric("Demandas", len(df_d))
+col2.metric("Modelos", len(df_m))
+col3.metric("Status", "Operacional")
 
-st.write("") # Espaçamento
+st.divider()
 
-# --- CORPO ---
-col1, col2 = st.columns([2, 1])
+# --- NAVEGAÇÃO E ATUALIZAÇÕES ---
+# Dividimos a tela para separar o que é AÇÃO do que é INFORMAÇÃO
+col_left, col_right = st.columns([1, 2])
 
-with col1:
-    st.subheader("Navegação")
-    c_a, c_b = st.columns(2)
-    with c_a:
-        if st.button("📁 Módulo de Demandas", use_container_width=True):
-            st.switch_page("pages/1_Demandas.py")
-    with c_b:
-        if st.button("🔧 Módulo de Modelos", use_container_width=True):
-            st.switch_page("pages/2_Modelos.py")
-            
-    st.write("")
-    st.subheader("Atividade Recente")
-    st.dataframe(df_d.head(5), use_container_width=True, hide_index=True)
-
-with col2:
-    st.subheader("Avisos")
-    st.info("O sistema está sincronizado com a base de dados principal.")
-    st.warning("Verifique as demandas com prazo de entrega para esta semana.")
+with col_left:
+    st.subheader("Acesso")
+    # Botões estilizados nativamente sem CSS complexo
+    if st.button("📁 Módulo de Demandas", use_container_width=True):
+        st.switch_page("pages/1_Demandas.py")
     
-    if st.button("🔄 Atualizar dados da tela"):
+    if st.button("🔧 Módulo de Modelos", use_container_width=True):
+        st.switch_page("pages/2_Modelos.py")
+        
+    st.write("---")
+    if st.button("🔄 Atualizar dados"):
         st.cache_data.clear()
         st.rerun()
+
+with col_right:
+    st.subheader("Atividade Recente")
+    # Exibe apenas as colunas mais importantes para não poluir
+    if not df_d.empty:
+        st.dataframe(
+            df_d.head(5), 
+            use_container_width=True, 
+            hide_index=True
+        )
+    else:
+        st.info("Nenhum dado disponível.")
+
+# --- AVISOS ---
+st.divider()
+st.subheader("Comunicados")
+c_av1, c_av2 = st.columns(2)
+with c_av1:
+    st.warning("Verifique o preenchimento dos capítulos pendentes.")
+with c_av2:
+    st.info("O sistema está operando com a versão estável mais recente.")
 
 # --- RODAPÉ ---
 st.divider()
