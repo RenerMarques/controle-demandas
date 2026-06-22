@@ -41,6 +41,8 @@ client = conectar_gsheets()
 sheet_demandas = client.open_by_key("10F1PqOSXUj_tbN7qrm9qXKnKJQ7xcHUmtIOB72FpWaM").get_worksheet(0)
 sheet_modelos = client.open_by_key("1fYwQ2uoqXY6QJm0Kk9dW2vX0tjgbSuTeFNfONe8UWMs").get_worksheet(0)
 
+sheet = sheet_demandas
+
 # Definição das listas
 LISTA_TIPOS = ["NOVA", "CORREÇÃO", "UPGRADE"]
 LISTA_MODULOS = ["SIMPLO", "ELETRICOS", "HIBRIDOS", "TRACTOR", "MOTOS"]
