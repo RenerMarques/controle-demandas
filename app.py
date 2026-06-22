@@ -1,24 +1,41 @@
 import streamlit as st
+from config import carregar_dados_demandas, carregar_dados_modelos
 
-# Configurações globais do sistema
-st.set_page_config(
-    page_title="Gestão Integrada", 
-    layout="wide",
-    page_icon="📊"
-)
+st.set_page_config(page_title="Sistema de Gestão", layout="wide", page_icon="🚀")
 
-# Título e Introdução
-st.title("Bem-vindo ao Sistema de Gestão Integrada")
-st.markdown("""
-Esta é a plataforma central para controle de processos. 
-Utilize o **menu lateral** (à esquerda) para navegar entre os módulos:
+# --- TÍTULO E CABEÇALHO ---
+st.title("🚀 Sistema de Gestão Integrada")
+st.markdown("Bem-vindo ao painel central de controle. Utilize os acessos rápidos abaixo para navegar.")
+st.markdown("---")
 
-* **Controle de Demandas**: Gerencie e acompanhe as demandas em andamento.
-* **Lista de Modelos**: Consulte, adicione ou edite a base de modelos.
-""")
+# --- 2. DASHBOARD DE MÉTRICAS (Melhoria 2) ---
+# Carregamos os dados de forma otimizada
+df_d = carregar_dados_demandas()
+df_m = carregar_dados_modelos()
 
-# Opcional: Adicionar alguma informação de status ou boas-vindas visual
-st.info("💡 Dica: O menu lateral foi gerado automaticamente a partir da pasta 'pages/'.")
+col_m1, col_m2, col_m3 = st.columns(3)
+col_m1.metric("Total de Demandas", len(df_d))
+col_m2.metric("Total de Modelos", len(df_m))
+col_m3.metric("Status do Sistema", "Online", "Operacional")
 
-# Opcional: Você pode colocar uma imagem aqui se quiser um visual mais profissional
-st.image("Demanda.png", width=300)
+st.markdown("---")
+
+# --- 1. ACESSO RÁPIDO (Melhoria 1) ---
+st.subheader("📁 Acesso Rápido")
+c1, c2 = st.columns(2)
+
+with c1:
+    st.write("### 📋 Módulo de Demandas")
+    st.write("Gerencie o fluxo de demandas, adicione novos registros e consulte o histórico.")
+    if st.button("Acessar Demandas", use_container_width=True):
+        st.switch_page("pages/1_Demandas.py")
+
+with c2:
+    st.write("### 🔧 Módulo de Modelos")
+    st.write("Consulte, adicione ou edite a base de modelos do seu sistema.")
+    if st.button("Acessar Modelos", use_container_width=True):
+        st.switch_page("pages/2_Modelos.py")
+
+# Rodapé simples
+st.markdown("---")
+st.caption("Sistema de Gestão Integrada | Versão 1.0")
