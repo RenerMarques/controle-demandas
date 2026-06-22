@@ -16,34 +16,43 @@ df_mod = carregar_dados_modelos()
 tab_m1, tab_m2, tab_m3, tab_m4, tab_m5 = st.tabs(["➕ Adicionar", "🔍 Buscar", "📝 Editar", "🗑️ Excluir", "📊 Relatórios"])
 
 with tab_m1:
-st.subheader("➕ Adicionar Modelos")
-modo_add = st.radio("Método de cadastro:", ["Manual", "Upload em Lote (Excel)"], horizontal=True)
-
-if modo_add == "Manual":
-    with st.form("form_add_modelo", clear_on_submit=True):
-        # ... (seu código de input manual)
-        if st.form_submit_button("Salvar Modelo"):
-            sheet_modelos.insert_row([m_modulo, m_manual, m_capitulo, m_montadora, m_modelo], index=2)
-            st.cache_data.clear()
-            st.success("Salvo!")
-            st.rerun()
-else:
-    # ... (seu código de upload em lote)
-    if st.button("Confirmar Importação em Lote"):
-            sheet_modelos.insert_rows(dados_formatados, row=2)
-            st.cache_data.clear()
-            st.rerun()
+    st.subheader("➕ Adicionar Modelos")
+    modo_add = st.radio("Método de cadastro:", ["Manual", "Upload em Lote (Excel)"], horizontal=True)
+    
+    if modo_add == "Manual":
+        with st.form("form_add_modelo", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                m_modulo = st.selectbox("Módulo", LISTA_MODULOS)
+                m_manual = st.selectbox("Manual", LISTA_MANUAIS)
+                m_capitulo = st.text_input("Capítulo")
+            with col2:
+                m_montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
+                m_modelo = st.text_input("Modelo")
+            
+            if st.form_submit_button("Salvar Modelo"):
+                sheet_modelos.insert_row([m_modulo, m_manual, m_capitulo, m_montadora, m_modelo], index=2)
+                st.cache_data.clear()
+                st.success("Modelo salvo!")
+                st.rerun()
+    else:
+        st.info("O arquivo Excel deve conter as colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO")
+        uploaded_file = st.file_uploader("Escolha o arquivo Excel", type=["xlsx"])
+        if uploaded_file is not None:
+            df_up = pd.read_excel(uploaded_file)
+            if st.button("Confirmar Importação em Lote"):
+                dados_formatados = df_up.fillna("").values.tolist()
+                sheet_modelos.insert_rows(dados_formatados, row=2)
+                st.cache_data.clear()
+                st.rerun()
 
 with tab_m2:
     st.subheader("🔍 Busca Avançada de Modelos")
     df_mod = carregar_dados_modelos()
-    
     modo_busca_m = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], key="radio_mod", horizontal=True)
 
     if modo_busca_m == "Filtros em Cascata":
-        # Usando colunas mais equilibradas (Grid 3x2)
         c1, c2, c3 = st.columns(3)
-        
         with c1:
             mod_sel = st.selectbox("Módulo", ["Todos"] + df_mod["MÓDULO"].unique().tolist())
             man_sel = st.selectbox("Manual", ["Todos"] + df_mod["MANUAL"].unique().tolist())
@@ -52,17 +61,13 @@ with tab_m2:
             cap_sel = st.selectbox("Capítulo", ["Todos"] + df_mod["CAPITULO"].unique().tolist())
         with c3:
             model_sel = st.selectbox("Modelo", ["Todos"] + df_mod["MODELO"].unique().tolist())
-            st.info(f"Total: {len(df_mod)} registros")
-
-        # Lógica de Filtragem (mais enxuta)
+        
         final_mod = df_mod.copy()
         if mod_sel != "Todos": final_mod = final_mod[final_mod["MÓDULO"] == mod_sel]
         if man_sel != "Todos": final_mod = final_mod[final_mod["MANUAL"] == man_sel]
         if mont_sel != "Todas": final_mod = final_mod[final_mod["MONTADORA"] == mont_sel]
         if cap_sel != "Todos": final_mod = final_mod[final_mod["CAPITULO"] == cap_sel]
         if model_sel != "Todos": final_mod = final_mod[final_mod["MODELO"] == model_sel]
-            
-        st.divider()
         st.dataframe(final_mod, use_container_width=True, hide_index=True)
 
     else:
@@ -83,33 +88,38 @@ with tab_m3:
     st.subheader("📝 Editar Modelo")
     df_mod = carregar_dados_modelos()
     modelo_sel = st.selectbox("Selecione o Modelo para editar:", df_mod["MODELO"].tolist())
-    dados = df_mod[df_mod["MODELO"] == modelo_sel].iloc[0]
-    with st.form("form_edit_m"):
-        n_mod = st.selectbox("Módulo", LISTA_MODULOS, index=LISTA_MODULOS.index(dados["MÓDULO"]))
-        n_man = st.selectbox("Manual", LISTA_MANUAIS, index=LISTA_MANUAIS.index(dados["MANUAL"]))
-        n_cap = st.text_input("Capítulo", value=dados["CAPITULO"])
-        n_mon = st.selectbox("Montadora", LISTA_MONTADORAS, index=LISTA_MONTADORAS.index(dados["MONTADORA"]))
-        n_model = st.text_input("Modelo", value=dados["MODELO"])
-        if st.form_submit_button("Atualizar"):
-            cell = sheet_modelos.find(modelo_sel)
-            sheet_modelos.update(range_name=f"A{cell.row}:E{cell.row}", values=[[n_mod, n_man, n_cap, n_mon, n_model]])
-            st.success("Atualizado!")
-            st.rerun()
+    
+    if modelo_sel:
+        dados = df_mod[df_mod["MODELO"] == modelo_sel].iloc[0]
+        with st.form("form_edit_m"):
+            n_mod = st.selectbox("Módulo", LISTA_MODULOS, index=LISTA_MODULOS.index(dados["MÓDULO"]))
+            n_man = st.selectbox("Manual", LISTA_MANUAIS, index=LISTA_MANUAIS.index(dados["MANUAL"]))
+            n_cap = st.text_input("Capítulo", value=dados["CAPITULO"])
+            n_mon = st.selectbox("Montadora", LISTA_MONTADORAS, index=LISTA_MONTADORAS.index(dados["MONTADORA"]))
+            n_model = st.text_input("Modelo", value=dados["MODELO"])
+            
+            if st.form_submit_button("Atualizar"):
+                cell = sheet_modelos.find(modelo_sel)
+                sheet_modelos.update(range_name=f"A{cell.row}:E{cell.row}", values=[[n_mod, n_man, n_cap, n_mon, n_model]])
+                st.success("Atualizado!")
+                st.cache_data.clear()
+                st.rerun()
 
 with tab_m4:
     st.subheader("🗑️ Excluir Modelo")
     df_mod = carregar_dados_modelos()
     m_del = st.selectbox("Selecione o Modelo a excluir", [""] + df_mod["MODELO"].tolist())
+    
     if m_del:
         if st.button("Confirmar Exclusão"):
             cell = sheet_modelos.find(m_del)
             sheet_modelos.delete_rows(cell.row)
             st.success("Excluído!")
+            st.cache_data.clear()
             st.rerun()
 
 with tab_m5:
     st.header("📊 Relatórios Detalhados")
-    # Carrega os dados uma vez para o relatório
     df_mod_geral = carregar_dados_modelos()
     
     # --- 1. FILTROS DINÂMICOS ---
@@ -147,7 +157,6 @@ with tab_m5:
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 df_exp.to_excel(writer, index=False)
             st.download_button("📥 Baixar Relatório Excel", data=buffer.getvalue(), file_name="relatorio_modelos.xlsx", mime="application/vnd.ms-excel")
-        
         else: # PDF
             buffer = io.BytesIO()
             c = canvas.Canvas(buffer, pagesize=A4)
@@ -159,7 +168,9 @@ with tab_m5:
                 linha = f"{row['MÓDULO']} | {row['MANUAL']} | {row['MONTADORA']} | {row['MODELO']}"
                 c.drawString(50, y, linha)
                 y -= 20
-                if y < 50: c.showPage(); y = 800
+                if y < 50: 
+                    c.showPage()
+                    y = 800
             c.save()
             st.download_button("📥 Baixar Relatório PDF", data=buffer.getvalue(), file_name="relatorio_modelos.pdf", mime="application/pdf")
     else:

@@ -4,7 +4,6 @@ from datetime import datetime
 import io
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-# IMPORTANTE: Importamos as variáveis e funções do seu novo arquivo de configuração
 from config import sheet_demandas, carregar_dados_demandas, LISTA_TIPOS, LISTA_MODULOS, LISTA_MANUAIS, LISTA_MONTADORAS, LISTA_VERSOES
 
 st.set_page_config(page_title="Controle de Demandas", layout="wide")
@@ -13,41 +12,41 @@ st.title("📋 Controle de Demandas")
 
 # --- INTERFACE POR ABAS ---
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-"➕ Adicionar", "🔍 Buscar", "📝 Editar", "🗑️ Excluir", "📊 Relatórios"
+    "➕ Adicionar", "🔍 Buscar", "📝 Editar", "🗑️ Excluir", "📊 Relatórios"
 ])
 
-# Para facilitar, apelidamos a planilha de 'sheet' como no seu código original
+# Apelidando a planilha e definindo a função de carregamento
 sheet = sheet_demandas 
-# E criamos uma função local para carregar (usando a que veio do config)
+
 def carregar_dados():
-return carregar_dados_demandas()
+    return carregar_dados_demandas()
 
 with tab1:
-st.subheader("Nova Demanda")
-with st.form("form_adicionar", clear_on_submit=True):
-    col1, col2 = st.columns(2)
-    with col1:
-        demanda = st.text_input("Demanda")
-        tipo = st.selectbox("Tipo", LISTA_TIPOS)
-        modulo = st.selectbox("Módulo", LISTA_MODULOS)
-        manual = st.selectbox("Manual", LISTA_MANUAIS)
-    with col2:
-        data_obj = st.date_input("Data Linkagem")
-        data_linkagem = data_obj.strftime("%d/%m/%Y") if data_obj else ""
-        capitulo = st.text_input("Capítulo")
-        montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
-        versao = st.selectbox("Versão", LISTA_VERSOES)
-    
-    if st.form_submit_button("Salvar Nova Demanda"):
-        sheet.insert_row([demanda, tipo, modulo, manual, data_linkagem, capitulo, montadora, versao], index=2)
-        st.success("Salvo com sucesso!")
-        st.cache_data.clear() 
-        st.rerun()
+    st.subheader("Nova Demanda")
+    with st.form("form_adicionar", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            demanda = st.text_input("Demanda")
+            tipo = st.selectbox("Tipo", LISTA_TIPOS)
+            modulo = st.selectbox("Módulo", LISTA_MODULOS)
+            manual = st.selectbox("Manual", LISTA_MANUAIS)
+        with col2:
+            data_obj = st.date_input("Data Linkagem")
+            data_linkagem = data_obj.strftime("%d/%m/%Y") if data_obj else ""
+            capitulo = st.text_input("Capítulo")
+            montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
+            versao = st.selectbox("Versão", LISTA_VERSOES)
+        
+        if st.form_submit_button("Salvar Nova Demanda"):
+            sheet.insert_row([demanda, tipo, modulo, manual, data_linkagem, capitulo, montadora, versao], index=2)
+            st.success("Salvo com sucesso!")
+            st.cache_data.clear() 
+            st.rerun()
 
-st.divider()
-st.subheader("📋 Demandas Cadastradas Recentemente")
-df_atualizado = carregar_dados()
-st.dataframe(df_atualizado.head(10), use_container_width=True, hide_index=True)
+    st.divider()
+    st.subheader("📋 Demandas Cadastradas Recentemente")
+    df_atualizado = carregar_dados()
+    st.dataframe(df_atualizado.head(10), use_container_width=True, hide_index=True)
 
 with tab2:
     st.subheader("🔍 Busca Avançada")
@@ -181,4 +180,4 @@ with tab5:
             y -= 20
             if y < 50: c.showPage(); y = 800
         c.save()
-        st.download_button("📥 Baixar PDF", data=buffer.getvalue(), file_name="relatorio.pdf", mime="application/pdf")# ... (Continue colando o restante das abas tab2, tab3, tab4 e tab5 aqui)
+        st.download_button("📥 Baixar PDF", data=buffer.getvalue(), file_name="relatorio.pdf", mime="application/pdf")
