@@ -21,4 +21,4 @@ Utilize o **menu lateral** (à esquerda) para navegar entre os módulos:
 st.info("💡 Dica: O menu lateral foi gerado automaticamente a partir da pasta 'pages/'.")
 
 # Opcional: Você pode colocar uma imagem aqui se quiser um visual mais profissional
-# st.image("sua_imagem_de_logo.png", width=300)
+st.image("Demanda.png", width=300)
