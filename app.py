@@ -28,13 +28,13 @@ with col_left:
     st.subheader("Acesso")
     # Botões estilizados nativamente sem CSS complexo
     if st.button("📁 Módulo de Demandas", use_container_width=True):
-        st.switch_page("pages/1_Demandas.py")
+        st.switch_page("pages/Demandas.py")
     
     if st.button("🔧 Módulo de Modelos", use_container_width=True):
-        st.switch_page("pages/2_Modelos.py")
+        st.switch_page("pages/Modelos.py")
 
     if st.button("📚 Módulo de Capítulos", use_container_width=True):
-        st.switch_page("pages/3_Capitulos.py")
+        st.switch_page("pages/Capitulos.py")
 
     st.write("---")
     if st.button("🔄 Atualizar dados"):
