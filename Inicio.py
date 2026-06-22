@@ -28,13 +28,13 @@ with c1:
     st.write("### 📋 Módulo de Demandas")
     st.write("Gerencie o fluxo de demandas, adicione novos registros e consulte o histórico.")
     if st.button("Acessar Demandas", use_container_width=True):
-        st.switch_page("pages/1_Demandas.py")
+        st.switch_page("pages/Demandas.py")
 
 with c2:
     st.write("### 🔧 Módulo de Modelos")
     st.write("Consulte, adicione ou edite a base de modelos do seu sistema.")
     if st.button("Acessar Modelos", use_container_width=True):
-        st.switch_page("pages/2_Modelos.py")
+        st.switch_page("pages/Modelos.py")
 
 # Rodapé simples
 st.markdown("---")
