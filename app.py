@@ -32,7 +32,10 @@ with col_left:
     
     if st.button("🔧 Módulo de Modelos", use_container_width=True):
         st.switch_page("pages/2_Modelos.py")
-        
+
+    if st.button("📚 Módulo de Capítulos", use_container_width=True):
+        st.switch_page("pages/3_Capitulos.py")
+
     st.write("---")
     if st.button("🔄 Atualizar dados"):
         st.cache_data.clear()
