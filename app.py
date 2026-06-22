@@ -55,7 +55,7 @@ st.divider()
 st.subheader("Comunicados")
 c_av1, c_av2 = st.columns(2)
 with c_av1:
-    st.warning("Verifique o preenchimento dos capítulos pendentes.")
+    st.warning("Versão 2026/3 será lançada em 31 de Agosto!")
 with c_av2:
     st.info("O sistema está operando com a versão estável mais recente.")
 
