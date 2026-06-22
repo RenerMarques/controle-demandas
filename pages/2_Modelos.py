@@ -1,0 +1,166 @@
+import streamlit as st
+import pandas as pd
+import io
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from config import sheet_modelos, carregar_dados_modelos, LISTA_MODULOS, LISTA_MANUAIS, LISTA_MONTADORAS
+
+st.set_page_config(page_title="Gestão de Modelos", layout="wide")
+
+st.title("📋 Controle de Modelos")
+
+# Carrega os dados
+df_mod = carregar_dados_modelos()
+
+# Abas
+tab_m1, tab_m2, tab_m3, tab_m4, tab_m5 = st.tabs(["➕ Adicionar", "🔍 Buscar", "📝 Editar", "🗑️ Excluir", "📊 Relatórios"])
+
+with tab_m1:
+    st.subheader("➕ Adicionar Modelos")
+    modo_add = st.radio("Método de cadastro:", ["Manual", "Upload em Lote (Excel)"], horizontal=True)
+    
+    if modo_add == "Manual":
+        with st.form("form_add_modelo", clear_on_submit=True):
+            # ... (seu código de input manual)
+            if st.form_submit_button("Salvar Modelo"):
+                sheet_modelos.insert_row([m_modulo, m_manual, m_capitulo, m_montadora, m_modelo], index=2)
+                st.cache_data.clear()
+                st.success("Salvo!")
+                st.rerun()
+    else:
+        # ... (seu código de upload em lote)
+        if st.button("Confirmar Importação em Lote"):
+             sheet_modelos.insert_rows(dados_formatados, row=2)
+             st.cache_data.clear()
+             st.rerun()
+
+with tab_m2:
+        st.subheader("🔍 Busca Avançada de Modelos")
+        df_mod = carregar_dados_modelos()
+        
+        modo_busca_m = st.radio("Escolha o método de busca:", ["Filtros em Cascata", "Busca por Campo Específico"], key="radio_mod", horizontal=True)
+
+        if modo_busca_m == "Filtros em Cascata":
+            # Usando colunas mais equilibradas (Grid 3x2)
+            c1, c2, c3 = st.columns(3)
+            
+            with c1:
+                mod_sel = st.selectbox("Módulo", ["Todos"] + df_mod["MÓDULO"].unique().tolist())
+                man_sel = st.selectbox("Manual", ["Todos"] + df_mod["MANUAL"].unique().tolist())
+            with c2:
+                mont_sel = st.selectbox("Montadora", ["Todas"] + df_mod["MONTADORA"].unique().tolist())
+                cap_sel = st.selectbox("Capítulo", ["Todos"] + df_mod["CAPITULO"].unique().tolist())
+            with c3:
+                model_sel = st.selectbox("Modelo", ["Todos"] + df_mod["MODELO"].unique().tolist())
+                st.info(f"Total: {len(df_mod)} registros")
+
+            # Lógica de Filtragem (mais enxuta)
+            final_mod = df_mod.copy()
+            if mod_sel != "Todos": final_mod = final_mod[final_mod["MÓDULO"] == mod_sel]
+            if man_sel != "Todos": final_mod = final_mod[final_mod["MANUAL"] == man_sel]
+            if mont_sel != "Todas": final_mod = final_mod[final_mod["MONTADORA"] == mont_sel]
+            if cap_sel != "Todos": final_mod = final_mod[final_mod["CAPITULO"] == cap_sel]
+            if model_sel != "Todos": final_mod = final_mod[final_mod["MODELO"] == model_sel]
+                
+            st.divider()
+            st.dataframe(final_mod, use_container_width=True, hide_index=True)
+
+        else:
+            # Layout mais limpo para busca específica
+            c1, c2 = st.columns([1, 2])
+            with c1:
+                coluna_alvo = st.selectbox("Selecione o campo:", df_mod.columns.tolist(), key="col_mod")
+            with c2:
+                valor_busca = st.text_input("Digite o valor para busca:", key="val_mod", placeholder="Ex: Ford")
+            
+            if valor_busca:
+                resultado_mod = df_mod[df_mod[coluna_alvo].astype(str).str.contains(valor_busca, case=False)]
+                st.dataframe(resultado_mod, use_container_width=True, hide_index=True)
+            else:
+                st.info("Digite um termo para começar a busca.")
+
+    with tab_m3:
+        st.subheader("📝 Editar Modelo")
+        df_mod = carregar_dados_modelos()
+        modelo_sel = st.selectbox("Selecione o Modelo para editar:", df_mod["MODELO"].tolist())
+        dados = df_mod[df_mod["MODELO"] == modelo_sel].iloc[0]
+        with st.form("form_edit_m"):
+            n_mod = st.selectbox("Módulo", LISTA_MODULOS, index=LISTA_MODULOS.index(dados["MÓDULO"]))
+            n_man = st.selectbox("Manual", LISTA_MANUAIS, index=LISTA_MANUAIS.index(dados["MANUAL"]))
+            n_cap = st.text_input("Capítulo", value=dados["CAPITULO"])
+            n_mon = st.selectbox("Montadora", LISTA_MONTADORAS, index=LISTA_MONTADORAS.index(dados["MONTADORA"]))
+            n_model = st.text_input("Modelo", value=dados["MODELO"])
+            if st.form_submit_button("Atualizar"):
+                cell = sheet_modelos.find(modelo_sel)
+                sheet_modelos.update(range_name=f"A{cell.row}:E{cell.row}", values=[[n_mod, n_man, n_cap, n_mon, n_model]])
+                st.success("Atualizado!")
+                st.rerun()
+
+    with tab_m4:
+        st.subheader("🗑️ Excluir Modelo")
+        df_mod = carregar_dados_modelos()
+        m_del = st.selectbox("Selecione o Modelo a excluir", [""] + df_mod["MODELO"].tolist())
+        if m_del:
+            if st.button("Confirmar Exclusão"):
+                cell = sheet_modelos.find(m_del)
+                sheet_modelos.delete_rows(cell.row)
+                st.success("Excluído!")
+                st.rerun()
+
+    with tab_m5:
+        st.header("📊 Relatórios Detalhados")
+        # Carrega os dados uma vez para o relatório
+        df_mod_geral = carregar_dados_modelos()
+        
+        # --- 1. FILTROS DINÂMICOS ---
+        st.subheader("Filtros de Visualização e Exportação")
+        c1, c2, c3 = st.columns(3)
+        
+        with c1:
+            f_mod = st.selectbox("Módulo:", ["Todos"] + sorted(df_mod_geral["MÓDULO"].unique().tolist()))
+            f_man = st.selectbox("Manual:", ["Todos"] + sorted(df_mod_geral["MANUAL"].unique().tolist()))
+        with c2:
+            f_mon = st.selectbox("Montadora:", ["Todas"] + sorted(df_mod_geral["MONTADORA"].unique().tolist()))
+            f_cap = st.selectbox("Capítulo:", ["Todos"] + sorted(df_mod_geral["CAPITULO"].unique().tolist()))
+        with c3:
+            f_mod_ex = st.selectbox("Modelo:", ["Todos"] + sorted(df_mod_geral["MODELO"].unique().tolist()))
+            formato = st.radio("Formato de Exportação:", ["Excel (.xlsx)", "PDF (.pdf)"], horizontal=True)
+
+        # Aplicar filtros
+        df_exp = df_mod_geral.copy()
+        if f_mod != "Todos": df_exp = df_exp[df_exp["MÓDULO"] == f_mod]
+        if f_man != "Todos": df_exp = df_exp[df_exp["MANUAL"] == f_man]
+        if f_mon != "Todas": df_exp = df_exp[df_exp["MONTADORA"] == f_mon]
+        if f_cap != "Todos": df_exp = df_exp[df_exp["CAPITULO"] == f_cap]
+        if f_mod_ex != "Todos": df_exp = df_exp[df_exp["MODELO"] == f_mod_ex]
+
+        # --- 2. VISUALIZAÇÃO NA TELA ---
+        st.divider()
+        st.write(f"### Visualização: {len(df_exp)} registros encontrados")
+        st.dataframe(df_exp, use_container_width=True, hide_index=True)
+        st.divider()
+
+        # --- 3. EXPORTAÇÃO ---
+        if not df_exp.empty:
+            if formato == "Excel (.xlsx)":
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                    df_exp.to_excel(writer, index=False)
+                st.download_button("📥 Baixar Relatório Excel", data=buffer.getvalue(), file_name="relatorio_modelos.xlsx", mime="application/vnd.ms-excel")
+            
+            else: # PDF
+                buffer = io.BytesIO()
+                c = canvas.Canvas(buffer, pagesize=A4)
+                c.setFont("Helvetica-Bold", 16)
+                c.drawString(50, 800, "Relatório de Modelos")
+                c.setFont("Helvetica", 10)
+                y = 750
+                for _, row in df_exp.iterrows():
+                    linha = f"{row['MÓDULO']} | {row['MANUAL']} | {row['MONTADORA']} | {row['MODELO']}"
+                    c.drawString(50, y, linha)
+                    y -= 20
+                    if y < 50: c.showPage(); y = 800
+                c.save()
+                st.download_button("📥 Baixar Relatório PDF", data=buffer.getvalue(), file_name="relatorio_modelos.pdf", mime="application/pdf")
+        else:
+            st.warning("Nenhum registro encontrado para exportar.")
