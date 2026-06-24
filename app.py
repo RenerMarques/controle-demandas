@@ -1,5 +1,5 @@
 import streamlit as st
-from config import carregar_dados_demandas, carregar_dados_modelos
+from config import carregar_dados_demandas, carregar_dados_modelos, carregar_maiores_capitulos
 from datetime import datetime
 
 st.set_page_config(page_title="Gestão Integrada", layout="wide")
