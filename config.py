@@ -60,6 +60,6 @@ def carregar_maiores_capitulos():
     
     # Agrupamos pelo manual e pegamos o índice da linha que tem o maior CAP_NUM
     idx_maximos = df.groupby('MANUAL')['CAP_NUM'].idxmax()
-    maiores = df.loc[idx_maximos, ['MANUAL', 'CAPITULO']]
+    maiores = df.loc[idx_maximos, ['MANUAL', 'CAPITULO', 'CAP_NUM']]
     
     return maiores
