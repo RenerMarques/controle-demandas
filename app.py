@@ -65,18 +65,17 @@ with c_av2:
 # --- NOVA SEÇÃO: ÚLTIMOS CAPÍTULOS POR MANUAL ---
 st.subheader("📈 Maiores Capítulos Utilizados")
 
+# No seu app.py, dentro do expander:
 with st.expander("Ver lista de capítulos máximos por manual"):
     df_maiores = carregar_maiores_capitulos()
     
-    # Exibimos em formato de tabela elegante
+    # Ordenamos pela coluna numérica, mas mostramos os dados originais
+    df_display = df_maiores.sort_values(by='CAP_NUM', ascending=False)
+    
     st.dataframe(
-        df_maiores.sort_values(by='CAPITULO', ascending=False), 
+        df_display[['MANUAL', 'CAPITULO']], # Exibe apenas as colunas amigáveis
         use_container_width=True, 
-        hide_index=True,
-        column_config={
-            "MANUAL": st.column_config.TextColumn("Manual"),
-            "CAPITULO": st.column_config.NumberColumn("Maior Capítulo", format="%d")
-        }
+        hide_index=True
     )
 
 # --- RODAPÉ ---
