@@ -62,6 +62,23 @@ with c_av1:
 with c_av2:
     st.info("O sistema está operando com a versão estável mais recente.")
 
+# --- NOVA SEÇÃO: ÚLTIMOS CAPÍTULOS POR MANUAL ---
+st.subheader("📈 Maiores Capítulos Utilizados")
+
+with st.expander("Ver lista de capítulos máximos por manual"):
+    df_maiores = carregar_maiores_capitulos()
+    
+    # Exibimos em formato de tabela elegante
+    st.dataframe(
+        df_maiores.sort_values(by='CAPITULO', ascending=False), 
+        use_container_width=True, 
+        hide_index=True,
+        column_config={
+            "MANUAL": st.column_config.TextColumn("Manual"),
+            "CAPITULO": st.column_config.NumberColumn("Maior Capítulo", format="%d")
+        }
+    )
+
 # --- RODAPÉ ---
 st.divider()
 st.write("© 2026 Gestão Integrada")

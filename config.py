@@ -2,6 +2,7 @@ import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
+import re
 
 # Defina os IDs das suas planilhas aqui
 ID_DEMANDAS = "10F1PqOSXUj_tbN7qrm9qXKnKJQ7xcHUmtIOB72FpWaM"
@@ -44,3 +45,21 @@ def carregar_dados_modelos():
 @st.cache_data(ttl=600)
 def carregar_dados_capitulos():
     return pd.DataFrame(sheet_capitulos.get_all_records())
+
+def carregar_maiores_capitulos():
+    df = carregar_dados_demandas()
+    
+    # Função para extrair apenas a parte numérica inicial (ex: "53A" vira 53)
+    def extrair_numero(valor):
+        valor_str = str(valor)
+        match = re.match(r"(\d+)", valor_str)
+        return int(match.group(1)) if match else 0
+
+    # Criamos uma coluna temporária para ordenação numérica
+    df['CAP_NUM'] = df['CAPITULO'].apply(extrair_numero)
+    
+    # Agrupamos pelo manual e pegamos o índice da linha que tem o maior CAP_NUM
+    idx_maximos = df.groupby('MANUAL')['CAP_NUM'].idxmax()
+    maiores = df.loc[idx_maximos, ['MANUAL', 'CAPITULO']]
+    
+    return maiores
