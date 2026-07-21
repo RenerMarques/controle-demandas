@@ -1,6 +1,5 @@
 import streamlit as st
 from config import carregar_dados_demandas, carregar_dados_modelos, carregar_maiores_capitulos
-from datetime import datetime
 
 st.set_page_config(page_title="Gestão Integrada", layout="wide")
 
@@ -29,7 +28,7 @@ with col_left:
     # Botões estilizados nativamente sem CSS complexo
     if st.button("📁 Módulo de Demandas", use_container_width=True):
         st.switch_page("pages/Demandas.py")
-    
+
     if st.button("🔧 Módulo de Modelos", use_container_width=True):
         st.switch_page("pages/Modelos.py")
 
@@ -46,8 +45,8 @@ with col_right:
     # Exibe apenas as colunas mais importantes para não poluir
     if not df_d.empty:
         st.dataframe(
-            df_d.head(5), 
-            use_container_width=True, 
+            df_d.drop(columns=["_row"]).head(5),
+            use_container_width=True,
             hide_index=True
         )
     else:
@@ -62,21 +61,23 @@ with c_av1:
 with c_av2:
     st.info("O sistema está operando com a versão estável mais recente.")
 
-# --- NOVA SEÇÃO: ÚLTIMOS CAPÍTULOS POR MANUAL ---
+# --- ÚLTIMOS CAPÍTULOS POR MANUAL ---
 st.subheader("📈 Maiores Capítulos Utilizados")
 
-# No seu app.py, dentro do expander:
 with st.expander("Ver lista de capítulos máximos por manual"):
     df_maiores = carregar_maiores_capitulos()
-    
-    # Ordenamos pela coluna numérica, mas mostramos os dados originais
-    df_display = df_maiores.sort_values(by='CAP_NUM', ascending=False)
-    
-    st.dataframe(
-        df_display[['MANUAL', 'CAPITULO']], # Exibe apenas as colunas amigáveis
-        use_container_width=True, 
-        hide_index=True
-    )
+
+    if df_maiores.empty:
+        st.info("Nenhum capítulo disponível ainda.")
+    else:
+        # Ordenamos pela coluna numérica, mas mostramos os dados originais
+        df_display = df_maiores.sort_values(by='CAP_NUM', ascending=False)
+
+        st.dataframe(
+            df_display[['MANUAL', 'CAPITULO']],  # Exibe apenas as colunas amigáveis
+            use_container_width=True,
+            hide_index=True
+        )
 
 # --- RODAPÉ ---
 st.divider()
