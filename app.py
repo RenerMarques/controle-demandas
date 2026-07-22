@@ -2,6 +2,8 @@ import streamlit as st
 import logging
 from config import carregar_dados_demandas, carregar_dados_modelos, carregar_maiores_capitulos
 
+# Remover estas linhas:
+# from alerts import exibir_alertas_sidebar, exibir_alertas_streamlit
 
 # Configurar logging
 logging.basicConfig(
@@ -15,8 +17,8 @@ st.set_page_config(page_title="Gestão Integrada", layout="wide")
 st.title("🏠 Sistema de Gestão Integrada")
 st.markdown("Bem-vindo ao painel central. Selecione um módulo abaixo para começar.")
 
-# --- EXIBIR ALERTAS NA SIDEBAR ---
-exibir_alertas_sidebar()
+# --- REMOVER ESTA SEÇÃO ---
+# exibir_alertas_sidebar()
 
 # --- MÉTRICAS ---
 try:
@@ -34,11 +36,10 @@ except Exception as e:
 
 st.divider()
 
-# --- EXIBIR ALERTAS PRINCIPAIS ---
-st.subheader("🔔 Centro de Alertas")
-exibir_alertas_streamlit()
-
-st.divider()
+# --- REMOVER ESTA SEÇÃO ---
+# st.subheader("🔔 Centro de Alertas")
+# exibir_alertas_streamlit()
+# st.divider()
 
 # --- NAVEGAÇÃO E ATUALIZAÇÕES ---
 col_left, col_right = st.columns([1, 2])
