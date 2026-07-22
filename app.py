@@ -1,6 +1,7 @@
 import streamlit as st
 import logging
 from config import carregar_dados_demandas, carregar_dados_modelos, carregar_maiores_capitulos
+from alerts import exibir_alertas_sidebar, exibir_alertas_streamlit
 
 # Configurar logging
 logging.basicConfig(
@@ -11,9 +12,11 @@ logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="Gestão Integrada", layout="wide")
 
-# --- CABEÇALHO ---
 st.title("🏠 Sistema de Gestão Integrada")
 st.markdown("Bem-vindo ao painel central. Selecione um módulo abaixo para começar.")
+
+# --- EXIBIR ALERTAS NA SIDEBAR ---
+exibir_alertas_sidebar()
 
 # --- MÉTRICAS ---
 try:
@@ -31,6 +34,12 @@ except Exception as e:
 
 st.divider()
 
+# --- EXIBIR ALERTAS PRINCIPAIS ---
+st.subheader("🔔 Centro de Alertas")
+exibir_alertas_streamlit()
+
+st.divider()
+
 # --- NAVEGAÇÃO E ATUALIZAÇÕES ---
 col_left, col_right = st.columns([1, 2])
 
@@ -45,6 +54,9 @@ with col_left:
 
     if st.button("🔧 Módulo de Modelos", use_container_width=True):
         st.switch_page("pages/Modelos.py")
+
+    if st.button("📊 Dashboard Analítico", use_container_width=True):
+        st.switch_page("pages/Dashboard.py")
 
     st.write("---")
     if st.button("🔄 Atualizar Dados", use_container_width=True):
