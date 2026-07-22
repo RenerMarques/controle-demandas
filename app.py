@@ -1,7 +1,7 @@
 import streamlit as st
 import logging
 from config import carregar_dados_demandas, carregar_dados_modelos, carregar_maiores_capitulos
-from alerts import exibir_alertas_sidebar, exibir_alertas_streamlit
+
 
 # Configurar logging
 logging.basicConfig(
