@@ -16,66 +16,136 @@ if df_demandas.empty:
     st.warning("⚠️ Nenhuma demanda cadastrada.")
     st.stop()
 
-# --- FILTRO DE MONTADORA ---
-st.subheader("🔍 Selecione a Montadora")
-montadoras = ["Todas"] + sorted(df_demandas["MONTADORA"].unique().tolist())
-montadora_selecionada = st.selectbox("Montadora", montadoras, key="montadora_visual")
+# --- FILTRO DE VERSÃO ---
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    st.subheader("🔍 Filtro")
+
+with col2:
+    versoes = ["Todas"] + sorted(df_demandas["VERSÃO"].unique().tolist())
+    versao_selecionada = st.selectbox("Versão", versoes, key="versao")
 
 # Aplicar filtro
-if montadora_selecionada != "Todas":
-    df_filtered = df_demandas[df_demandas["MONTADORA"] == montadora_selecionada]
+if versao_selecionada != "Todas":
+    df_filtered = df_demandas[df_demandas["VERSÃO"] == versao_selecionada]
 else:
     df_filtered = df_demandas.copy()
 
-# --- FUNÇÃO PARA CRIAR CARD ---
-def criar_card(titulo, valor, cor_bg, cor_texto="white"):
-    """Cria um card colorido"""
-    st.markdown(
-        f"""
-        <div style="
-            background-color: {cor_bg};
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 10px;
-        ">
-            <h3 style="color: {cor_texto}; margin: 0; font-size: 18px;">{titulo}</h3>
-            <h1 style="color: {cor_texto}; margin: 10px 0 0 0; font-size: 48px;">{valor}</h1>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+# --- CSS CUSTOMIZADO ---
+st.markdown("""
+<style>
+    .card-kpi {
+        padding: 20px;
+        border-radius: 0px;
+        text-align: center;
+        margin-bottom: 15px;
+        color: white;
+        font-weight: bold;
+    }
+
+    .card-kpi-titulo {
+        font-size: 14px;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+    }
+
+    .card-kpi-valor {
+        font-size: 42px;
+        font-weight: bold;
+    }
+
+    .card-verde { background-color: #00AA44; }
+    .card-vermelho { background-color: #DD0000; }
+    .card-azul { background-color: #0066DD; }
+
+    .card-versao {
+        padding: 12px 15px;
+        border-radius: 0px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: white;
+        font-weight: bold;
+        font-size: 13px;
+        border-left: 5px solid;
+    }
+
+    .versao-claro { 
+        background-color: #87CEEB;
+        border-left-color: #0066DD;
+    }
+
+    .versao-escuro { 
+        background-color: #4A90E2;
+        border-left-color: #0044AA;
+    }
+
+    .card-versoes-titulo {
+        padding: 12px 15px;
+        background-color: #333333;
+        color: white;
+        font-weight: bold;
+        font-size: 13px;
+        margin-bottom: 8px;
+        border-radius: 0px;
+        letter-spacing: 1px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # --- KPIs PRINCIPAIS ---
 st.divider()
-st.subheader("📈 KPIs Principais")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
     novas = len(df_filtered[df_filtered["TIPO DEMANDA"] == "NOVO"])
-    criar_card("NOVAS DEMANDAS", novas, "#00AA44", "white")
+    st.markdown(f"""
+    <div class="card-kpi card-verde">
+        <div class="card-kpi-titulo">NOVAS DEMANDAS</div>
+        <div class="card-kpi-valor">{novas}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col2:
     correcoes = len(df_filtered[df_filtered["TIPO DEMANDA"] == "CORREÇÃO"])
-    criar_card("CORREÇÕES", correcoes, "#DD0000", "white")
+    st.markdown(f"""
+    <div class="card-kpi card-vermelho">
+        <div class="card-kpi-titulo">CORREÇÕES</div>
+        <div class="card-kpi-valor">{correcoes}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col3:
     upgrades = len(df_filtered[df_filtered["TIPO DEMANDA"] == "MELHORIA"])
-    criar_card("UPGRADES", upgrades, "#0066DD", "white")
+    st.markdown(f"""
+    <div class="card-kpi card-azul">
+        <div class="card-kpi-titulo">UPGRADES</div>
+        <div class="card-kpi-valor">{upgrades}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- VERSÕES ---
 st.divider()
-st.subheader("📦 VERSÕES")
 
-versoes = df_filtered["VERSÃO"].value_counts().sort_index()
+# Título de Versões
+st.markdown("""
+<div class="card-versoes-titulo">VERSÕES</div>
+""", unsafe_allow_html=True)
+
+versoes = df_demandas["VERSÃO"].value_counts().sort_index()
 
 # Cores alternadas para as versões
-cores_versoes = ["#87CEEB", "#4A90E2"]  # Azul claro e azul escuro
-
 for idx, (versao, quantidade) in enumerate(versoes.items()):
-    cor = cores_versoes[idx % 2]
-    criar_card(versao, quantidade, cor, "white")
+    classe = 'versao-claro' if idx % 2 == 0 else 'versao-escuro'
+    st.markdown(f"""
+    <div class="card-versao {classe}">
+        <span>{versao}</span>
+        <span>{quantidade}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- TABELA DETALHADA ---
 st.divider()
