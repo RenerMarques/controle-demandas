@@ -8,6 +8,10 @@ st.title("📊 Dashboard Visual")
 # --- CARREGAR DADOS ---
 try:
     df_demandas = carregar_dados_demandas()
+
+    # Limpar e padronizar a coluna TIPO DEMANDA
+    df_demandas["TIPO DEMANDA"] = df_demandas["TIPO DEMANDA"].str.strip().str.upper()
+
 except Exception as e:
     st.error(f"❌ Erro ao carregar dados: {str(e)}")
     st.stop()
