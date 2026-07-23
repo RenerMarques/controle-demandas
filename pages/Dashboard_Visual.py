@@ -105,7 +105,7 @@ st.divider()
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    novas = len(df_filtered[df_filtered["TIPO DEMANDA"] == "NOVO"])
+    novas = len(df_filtered[df_filtered["TIPO DEMANDA"] == "NOVA"])
     st.markdown(f"""
     <div class="card-kpi card-verde">
         <div class="card-kpi-titulo">NOVAS DEMANDAS</div>
@@ -123,7 +123,7 @@ with col2:
     """, unsafe_allow_html=True)
 
 with col3:
-    upgrades = len(df_filtered[df_filtered["TIPO DEMANDA"] == "MELHORIA"])
+    upgrades = len(df_filtered[df_filtered["TIPO DEMANDA"] == "UPGRADE"])
     st.markdown(f"""
     <div class="card-kpi card-azul">
         <div class="card-kpi-titulo">UPGRADES</div>
