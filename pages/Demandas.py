@@ -9,14 +9,19 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from config import (
-    sheet_demandas, carregar_dados_demandas, 
-    LISTA_TIPOS, LISTA_MODULOS, LISTA_MANUAIS, 
+    sheet_demandas, carregar_dados_demandas,
+    LISTA_TIPOS, LISTA_MODULOS, LISTA_MANUAIS,
     LISTA_MONTADORAS, LISTA_VERSOES
 )
 
 logger = logging.getLogger(__name__)
 st.set_page_config(page_title="Controle de Demandas", layout="wide")
 st.title("📋 Controle de Demandas")
+
+COLUNAS_ESPERADAS_DEMANDAS = [
+    "DEMANDA", "TIPO DEMANDA", "MÓDULO", "MANUAL",
+    "DATA LINKAGEM", "CAPITULO", "MONTADORA", "VERSÃO"
+]
 
 # --- FUNÇÕES AUXILIARES ---
 def parse_data(data_str):
@@ -64,6 +69,50 @@ def validar_demanda(demanda, tipo, modulo, manual, capitulo, montadora, versao):
         return False
     return True
 
+def validar_dataframe_upload_demandas(df):
+    """Valida DataFrame do upload em lote de demandas."""
+    erros = []
+
+    colunas_faltando = [c for c in COLUNAS_ESPERADAS_DEMANDAS if c not in df.columns]
+    if colunas_faltando:
+        erros.append(f"Colunas faltando: {', '.join(colunas_faltando)}")
+        st.error("❌ Erros no arquivo:\n" + "\n".join(f"• {e}" for e in erros))
+        return False
+
+    if df[COLUNAS_ESPERADAS_DEMANDAS].isnull().all(axis=1).any():
+        erros.append("Há linhas completamente vazias")
+
+    if df["DEMANDA"].isnull().any() or (df["DEMANDA"].astype(str).str.strip() == "").any():
+        erros.append("Campo DEMANDA contém valores vazios")
+
+    if df["CAPITULO"].isnull().any() or (df["CAPITULO"].astype(str).str.strip() == "").any():
+        erros.append("Campo CAPITULO contém valores vazios")
+
+    invalidos_tipo = set(df["TIPO DEMANDA"].astype(str).str.strip()) - set(LISTA_TIPOS)
+    if invalidos_tipo:
+        erros.append(f"TIPO DEMANDA com valores fora da lista: {', '.join(invalidos_tipo)}")
+
+    invalidos_modulo = set(df["MÓDULO"].astype(str).str.strip()) - set(LISTA_MODULOS)
+    if invalidos_modulo:
+        erros.append(f"MÓDULO com valores fora da lista: {', '.join(invalidos_modulo)}")
+
+    invalidos_manual = set(df["MANUAL"].astype(str).str.strip()) - set(LISTA_MANUAIS)
+    if invalidos_manual:
+        erros.append(f"MANUAL com valores fora da lista: {', '.join(invalidos_manual)}")
+
+    invalidos_montadora = set(df["MONTADORA"].astype(str).str.strip()) - set(LISTA_MONTADORAS)
+    if invalidos_montadora:
+        erros.append(f"MONTADORA com valores fora da lista: {', '.join(invalidos_montadora)}")
+
+    invalidos_versao = set(df["VERSÃO"].astype(str).str.strip()) - set(LISTA_VERSOES)
+    if invalidos_versao:
+        erros.append(f"VERSÃO com valores fora da lista: {', '.join(invalidos_versao)}")
+
+    if erros:
+        st.error("❌ Erros no arquivo:\n" + "\n".join(f"• {e}" for e in erros))
+        return False
+    return True
+
 # --- ABAS ---
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "➕ Adicionar", "🔍 Buscar", "📝 Editar", "🗑️ Excluir", "📊 Relatórios"
@@ -72,36 +121,85 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # ============ TAB 1: ADICIONAR ============
 with tab1:
     st.subheader("Nova Demanda")
-    with st.form("form_adicionar", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            demanda = st.text_input("Demanda").strip()
-            tipo = st.selectbox("Tipo", LISTA_TIPOS)
-            modulo = st.selectbox("Módulo", LISTA_MODULOS)
-            manual = st.selectbox("Manual", LISTA_MANUAIS)
-        with col2:
-            data_obj = st.date_input("Data Linkagem")
-            data_linkagem = formatar_data(data_obj)
-            capitulo = st.text_input("Capítulo").strip()
-            montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
-            versao = st.selectbox("Versão", LISTA_VERSOES)
+    modo_add = st.radio("Método de cadastro:", ["Manual", "Upload em Lote (Excel)"], horizontal=True)
 
-        if st.form_submit_button("Salvar Nova Demanda"):
-            if validar_demanda(demanda, tipo, modulo, manual, capitulo, montadora, versao):
-                with st.spinner("Salvando..."):
-                    try:
-                        sheet_demandas.insert_row(
-                            [demanda, tipo, modulo, manual, data_linkagem, capitulo, montadora, versao],
-                            index=2
-                        )
-                        st.cache_data.clear()
-                        st.success("✅ Demanda salva com sucesso!")
-                        logger.info(f"Demanda criada: {demanda}")
-                    except gspread.exceptions.APIError:
-                        st.error("❌ Erro na API do Google Sheets. Tente novamente.")
-                    except Exception as e:
-                        st.error(f"❌ Erro ao salvar: {str(e)}")
-                        logger.error(f"Erro ao salvar demanda: {e}", exc_info=True)
+    if modo_add == "Manual":
+        with st.form("form_adicionar", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                demanda = st.text_input("Demanda").strip()
+                tipo = st.selectbox("Tipo", LISTA_TIPOS)
+                modulo = st.selectbox("Módulo", LISTA_MODULOS)
+                manual = st.selectbox("Manual", LISTA_MANUAIS)
+            with col2:
+                data_obj = st.date_input("Data Linkagem")
+                data_linkagem = formatar_data(data_obj)
+                capitulo = st.text_input("Capítulo").strip()
+                montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
+                versao = st.selectbox("Versão", LISTA_VERSOES)
+
+            if st.form_submit_button("Salvar Nova Demanda"):
+                if validar_demanda(demanda, tipo, modulo, manual, capitulo, montadora, versao):
+                    with st.spinner("Salvando..."):
+                        try:
+                            sheet_demandas.insert_row(
+                                [demanda, tipo, modulo, manual, data_linkagem, capitulo, montadora, versao],
+                                index=2
+                            )
+                            st.cache_data.clear()
+                            st.success("✅ Demanda salva com sucesso!")
+                            logger.info(f"Demanda criada: {demanda}")
+                        except gspread.exceptions.APIError:
+                            st.error("❌ Erro na API do Google Sheets. Tente novamente.")
+                        except Exception as e:
+                            st.error(f"❌ Erro ao salvar: {str(e)}")
+                            logger.error(f"Erro ao salvar demanda: {e}", exc_info=True)
+
+    else:  # Upload em Lote
+        st.info(
+            "📋 O arquivo Excel deve conter as colunas: DEMANDA, TIPO DEMANDA, MÓDULO, MANUAL, "
+            "DATA LINKAGEM, CAPITULO, MONTADORA, VERSÃO. Os valores de TIPO DEMANDA, MÓDULO, MANUAL, "
+            "MONTADORA e VERSÃO precisam bater exatamente com as listas oficiais do sistema."
+        )
+        uploaded_file_dem = st.file_uploader("Escolha o arquivo Excel", type=["xlsx"], key="upload_demandas")
+
+        if uploaded_file_dem is not None:
+            with st.spinner("Lendo arquivo..."):
+                try:
+                    df_up_dem = pd.read_excel(uploaded_file_dem)
+                except Exception as e:
+                    st.error(f"❌ Não foi possível ler o arquivo: {e}")
+                    df_up_dem = None
+
+            if df_up_dem is not None:
+                # Normaliza a coluna de data para o formato DD/MM/YYYY em texto
+                if "DATA LINKAGEM" in df_up_dem.columns:
+                    def _formatar_data_upload(v):
+                        if pd.isna(v):
+                            return ""
+                        if isinstance(v, (pd.Timestamp, datetime)):
+                            return v.strftime("%d/%m/%Y")
+                        return formatar_data(parse_data(str(v)))
+                    df_up_dem["DATA LINKAGEM"] = df_up_dem["DATA LINKAGEM"].apply(_formatar_data_upload)
+
+                if validar_dataframe_upload_demandas(df_up_dem):
+                    df_preview_dem = df_up_dem[COLUNAS_ESPERADAS_DEMANDAS].fillna("")
+                    st.dataframe(df_preview_dem.head(10), use_container_width=True, hide_index=True)
+                    st.caption(f"📊 {len(df_preview_dem)} linha(s) prontas para importação.")
+
+                    if st.button("✅ Confirmar Importação em Lote", key="confirmar_lote_demandas"):
+                        dados_formatados_dem = df_preview_dem.values.tolist()
+                        with st.spinner("Importando..."):
+                            try:
+                                sheet_demandas.insert_rows(dados_formatados_dem, row=2)
+                                st.cache_data.clear()
+                                st.success(f"✅ {len(dados_formatados_dem)} demanda(s) importada(s) com sucesso!")
+                                logger.info(f"Importação em lote: {len(dados_formatados_dem)} demandas")
+                            except gspread.exceptions.APIError:
+                                st.error("❌ Erro na API do Google Sheets.")
+                            except Exception as e:
+                                st.error(f"❌ Erro na importação: {e}")
+                                logger.error(f"Erro ao importar demandas: {e}", exc_info=True)
 
     st.divider()
     st.subheader("📋 Demandas Cadastradas Recentemente")
