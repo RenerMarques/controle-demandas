@@ -119,87 +119,137 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 ])
 
 # ============ TAB 1: ADICIONAR ============
-with tab1:
-    st.subheader("Nova Demanda")
+with tab_m1:
+    st.subheader("➕ Adicionar Modelos")
     modo_add = st.radio("Método de cadastro:", ["Manual", "Upload em Lote (Excel)"], horizontal=True)
 
     if modo_add == "Manual":
-        with st.form("form_adicionar", clear_on_submit=True):
+        with st.form("form_add_modelo", clear_on_submit=True):
             col1, col2 = st.columns(2)
             with col1:
-                demanda = st.text_input("Demanda").strip()
-                tipo = st.selectbox("Tipo", LISTA_TIPOS)
-                modulo = st.selectbox("Módulo", LISTA_MODULOS)
-                manual = st.selectbox("Manual", LISTA_MANUAIS)
+                m_modulo = st.selectbox("Módulo", LISTA_MODULOS)
+                m_manual = st.selectbox("Manual", LISTA_MANUAIS)
+                m_capitulo = st.text_input("Capítulo").strip()
             with col2:
-                data_obj = st.date_input("Data Linkagem")
-                data_linkagem = formatar_data(data_obj)
-                capitulo = st.text_input("Capítulo").strip()
-                montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
-                versao = st.selectbox("Versão", LISTA_VERSOES)
+                m_montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
+                m_modelo = st.text_input("Modelo").strip()
 
-            if st.form_submit_button("Salvar Nova Demanda"):
-                if validar_demanda(demanda, tipo, modulo, manual, capitulo, montadora, versao):
+            if st.form_submit_button("Salvar Modelo"):
+                if validar_modelo(m_modulo, m_manual, m_capitulo, m_montadora, m_modelo):
                     with st.spinner("Salvando..."):
                         try:
-                            sheet_demandas.insert_row(
-                                [demanda, tipo, modulo, manual, data_linkagem, capitulo, montadora, versao],
-                                index=2
-                            )
-                            st.cache_data.clear()
-                            st.success("✅ Demanda salva com sucesso!")
-                            logger.info(f"Demanda criada: {demanda}")
+                            df_existente = carregar_dados_modelos()
+                            linha_existente = None
+
+                            if not df_existente.empty:
+                                match = df_existente[
+                                    (df_existente["MANUAL"].astype(str).str.strip().str.upper() == m_manual.strip().upper()) &
+                                    (df_existente["CAPITULO"].astype(str).str.strip().str.upper() == m_capitulo.strip().upper())
+                                ]
+                                if not match.empty:
+                                    linha_existente = int(match.iloc[0]["_row"])
+
+                            if linha_existente:
+                                sheet_modelos.update(
+                                    range_name=f"A{linha_existente}:E{linha_existente}",
+                                    values=[[m_modulo, m_manual, m_capitulo, m_montadora, m_modelo]]
+                                )
+                                st.cache_data.clear()
+                                st.success(
+                                    f"✅ Já existia um registro para Manual '{m_manual}' + Capítulo "
+                                    f"'{m_capitulo}'. Ele foi sobrescrito com os novos dados!"
+                                )
+                                logger.info(f"Modelo sobrescrito (linha {linha_existente}): {m_manual} - {m_capitulo} -> {m_modelo}")
+                            else:
+                                sheet_modelos.insert_row(
+                                    [m_modulo, m_manual, m_capitulo, m_montadora, m_modelo],
+                                    index=2
+                                )
+                                st.cache_data.clear()
+                                st.success("✅ Modelo salvo com sucesso!")
+                                logger.info(f"Modelo criado: {m_modelo}")
                         except gspread.exceptions.APIError:
                             st.error("❌ Erro na API do Google Sheets. Tente novamente.")
                         except Exception as e:
                             st.error(f"❌ Erro ao salvar: {str(e)}")
-                            logger.error(f"Erro ao salvar demanda: {e}", exc_info=True)
+                            logger.error(f"Erro ao salvar modelo: {e}", exc_info=True)
 
     else:  # Upload em Lote
         st.info(
-            "📋 O arquivo Excel deve conter as colunas: DEMANDA, TIPO DEMANDA, MÓDULO, MANUAL, "
-            "DATA LINKAGEM, CAPITULO, MONTADORA, VERSÃO. Os valores de TIPO DEMANDA, MÓDULO, MANUAL, "
-            "MONTADORA e VERSÃO precisam bater exatamente com as listas oficiais do sistema."
+            "📋 O arquivo Excel deve conter as colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO. "
+            "Se já existir um registro com o mesmo MANUAL e CAPITULO, ele será sobrescrito automaticamente."
         )
-        uploaded_file_dem = st.file_uploader("Escolha o arquivo Excel", type=["xlsx"], key="upload_demandas")
+        uploaded_file = st.file_uploader("Escolha o arquivo Excel", type=["xlsx"])
 
-        if uploaded_file_dem is not None:
+        if uploaded_file is not None:
             with st.spinner("Lendo arquivo..."):
                 try:
-                    df_up_dem = pd.read_excel(uploaded_file_dem)
+                    df_up = pd.read_excel(uploaded_file)
                 except Exception as e:
                     st.error(f"❌ Não foi possível ler o arquivo: {e}")
-                    df_up_dem = None
+                    df_up = None
 
-            if df_up_dem is not None:
-                # Normaliza a coluna de data para o formato DD/MM/YYYY em texto
-                if "DATA LINKAGEM" in df_up_dem.columns:
-                    def _formatar_data_upload(v):
-                        if pd.isna(v):
-                            return ""
-                        if isinstance(v, (pd.Timestamp, datetime)):
-                            return v.strftime("%d/%m/%Y")
-                        return formatar_data(parse_data(str(v)))
-                    df_up_dem["DATA LINKAGEM"] = df_up_dem["DATA LINKAGEM"].apply(_formatar_data_upload)
+            if df_up is not None:
+                if validar_dataframe_upload(df_up):
+                    df_preview = df_up[COLUNAS_ESPERADAS].fillna("")
+                    st.dataframe(df_preview.head(10), use_container_width=True, hide_index=True)
+                    st.caption(f"📊 {len(df_preview)} linha(s) prontas para importação.")
 
-                if validar_dataframe_upload_demandas(df_up_dem):
-                    df_preview_dem = df_up_dem[COLUNAS_ESPERADAS_DEMANDAS].fillna("")
-                    st.dataframe(df_preview_dem.head(10), use_container_width=True, hide_index=True)
-                    st.caption(f"📊 {len(df_preview_dem)} linha(s) prontas para importação.")
-
-                    if st.button("✅ Confirmar Importação em Lote", key="confirmar_lote_demandas"):
-                        dados_formatados_dem = df_preview_dem.values.tolist()
+                    if st.button("✅ Confirmar Importação em Lote"):
                         with st.spinner("Importando..."):
                             try:
-                                sheet_demandas.insert_rows(dados_formatados_dem, row=2)
+                                df_existente = carregar_dados_modelos()
+
+                                mapa_existente = {}
+                                if not df_existente.empty:
+                                    for _, row in df_existente.iterrows():
+                                        chave = (
+                                            str(row["MANUAL"]).strip().upper(),
+                                            str(row["CAPITULO"]).strip().upper()
+                                        )
+                                        mapa_existente[chave] = int(row["_row"])
+
+                                # Se o próprio arquivo tiver linhas repetidas (mesmo MANUAL+CAPITULO),
+                                # mantém a última ocorrência do arquivo
+                                mapa_lote = {}
+                                for _, row in df_preview.iterrows():
+                                    chave = (
+                                        str(row["MANUAL"]).strip().upper(),
+                                        str(row["CAPITULO"]).strip().upper()
+                                    )
+                                    mapa_lote[chave] = row.tolist()
+
+                                linhas_novas = []
+                                atualizacoes = []
+
+                                for chave, valores in mapa_lote.items():
+                                    if chave in mapa_existente:
+                                        atualizacoes.append((mapa_existente[chave], valores))
+                                    else:
+                                        linhas_novas.append(valores)
+
+                                for linha_num, valores in atualizacoes:
+                                    sheet_modelos.update(
+                                        range_name=f"A{linha_num}:E{linha_num}",
+                                        values=[valores]
+                                    )
+
+                                if linhas_novas:
+                                    sheet_modelos.insert_rows(linhas_novas, row=2)
+
                                 st.cache_data.clear()
-                                st.success(f"✅ {len(dados_formatados_dem)} demanda(s) importada(s) com sucesso!")
-                                logger.info(f"Importação em lote: {len(dados_formatados_dem)} demandas")
+                                st.success(
+                                    f"✅ Importação concluída: {len(linhas_novas)} novo(s) modelo(s) inserido(s) "
+                                    f"e {len(atualizacoes)} sobrescrito(s)."
+                                )
+                                logger.info(
+                                    f"Importação em lote: {len(linhas_novas)} novos, {len(atualizacoes)} sobrescritos"
+                                )
                             except gspread.exceptions.APIError:
                                 st.error("❌ Erro na API do Google Sheets.")
                             except Exception as e:
                                 st.error(f"❌ Erro na importação: {e}")
-                                logger.error(f"Erro ao importar demandas: {e}", exc_info=True)
+                                logger.error(f"Erro ao importar modelos: {e}", exc_info=True)
 
     st.divider()
     st.subheader("📋 Demandas Cadastradas Recentemente")
