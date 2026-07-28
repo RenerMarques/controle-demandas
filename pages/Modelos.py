@@ -497,19 +497,20 @@ with tab_m5:
         st.write(f"### 📊 Visualização: {len(df_exp)} registros encontrados")
         st.dataframe(df_exp, use_container_width=True, hide_index=True)
 
-        # --- VERIFICAÇÃO DE DUPLICIDADE ---
+                # --- VERIFICAÇÃO DE DUPLICIDADE ---
         st.divider()
         st.subheader("🔎 Verificação de Modelos Duplicados")
         st.caption(
             "Um registro é considerado duplicado quando existe outro com o mesmo MÓDULO, "
-            "MANUAL e CAPITULO — independentemente do nome do MODELO ou da MONTADORA."
+            "MANUAL, CAPITULO e MODELO — a MONTADORA não entra nessa comparação."
         )
 
         df_dup_check = df_mod_geral.copy()
         df_dup_check["_CHAVE"] = (
             df_dup_check["MÓDULO"].astype(str).str.strip().str.upper() + " | " +
             df_dup_check["MANUAL"].astype(str).str.strip().str.upper() + " | " +
-            df_dup_check["CAPITULO"].astype(str).str.strip().str.upper()
+            df_dup_check["CAPITULO"].astype(str).str.strip().str.upper() + " | " +
+            df_dup_check["MODELO"].astype(str).str.strip().str.upper()
         )
 
         duplicados = df_dup_check[df_dup_check.duplicated(subset=["_CHAVE"], keep=False)]
@@ -519,11 +520,11 @@ with tab_m5:
         else:
             n_grupos = duplicados["_CHAVE"].nunique()
             st.warning(
-                f"⚠️ Encontrado(s) **{n_grupos} grupo(s)** de MÓDULO + MANUAL + CAPITULO "
+                f"⚠️ Encontrado(s) **{n_grupos} grupo(s)** de MÓDULO + MANUAL + CAPITULO + MODELO "
                 f"com múltiplos registros, totalizando **{len(duplicados)} linhas**."
             )
 
-            duplicados_ordenados = duplicados.sort_values(by=["MÓDULO", "MANUAL", "CAPITULO"])
+            duplicados_ordenados = duplicados.sort_values(by=["MÓDULO", "MANUAL", "CAPITULO", "MODELO"])
             colunas_dup = [c for c in duplicados_ordenados.columns if c not in ["_row", "_CHAVE"]]
             st.dataframe(duplicados_ordenados[colunas_dup], use_container_width=True, hide_index=True)
 
