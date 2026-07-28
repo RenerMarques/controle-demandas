@@ -137,13 +137,36 @@ with tab_m1:
                 if validar_modelo(m_modulo, m_manual, m_capitulo, m_montadora, m_modelo):
                     with st.spinner("Salvando..."):
                         try:
-                            sheet_modelos.insert_row(
-                                [m_modulo, m_manual, m_capitulo, m_montadora, m_modelo],
-                                index=2
-                            )
-                            st.cache_data.clear()
-                            st.success("✅ Modelo salvo com sucesso!")
-                            logger.info(f"Modelo criado: {m_modelo}")
+                            df_existente = carregar_dados_modelos()
+                            linha_existente = None
+
+                            if not df_existente.empty:
+                                match = df_existente[
+                                    (df_existente["MANUAL"].astype(str).str.strip().str.upper() == m_manual.strip().upper()) &
+                                    (df_existente["CAPITULO"].astype(str).str.strip().str.upper() == m_capitulo.strip().upper())
+                                ]
+                                if not match.empty:
+                                    linha_existente = int(match.iloc[0]["_row"])
+
+                            if linha_existente:
+                                sheet_modelos.update(
+                                    range_name=f"A{linha_existente}:E{linha_existente}",
+                                    values=[[m_modulo, m_manual, m_capitulo, m_montadora, m_modelo]]
+                                )
+                                st.cache_data.clear()
+                                st.success(
+                                    f"✅ Já existia um registro para Manual '{m_manual}' + Capítulo "
+                                    f"'{m_capitulo}'. Ele foi sobrescrito com os novos dados!"
+                                )
+                                logger.info(f"Modelo sobrescrito (linha {linha_existente}): {m_manual} - {m_capitulo} -> {m_modelo}")
+                            else:
+                                sheet_modelos.insert_row(
+                                    [m_modulo, m_manual, m_capitulo, m_montadora, m_modelo],
+                                    index=2
+                                )
+                                st.cache_data.clear()
+                                st.success("✅ Modelo salvo com sucesso!")
+                                logger.info(f"Modelo criado: {m_modelo}")
                         except gspread.exceptions.APIError:
                             st.error("❌ Erro na API do Google Sheets. Tente novamente.")
                         except Exception as e:
@@ -151,7 +174,10 @@ with tab_m1:
                             logger.error(f"Erro ao salvar modelo: {e}", exc_info=True)
 
     else:  # Upload em Lote
-        st.info("📋 O arquivo Excel deve conter as colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO")
+        st.info(
+            "📋 O arquivo Excel deve conter as colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO. "
+            "Se já existir um registro com o mesmo MANUAL e CAPITULO, ele será sobrescrito automaticamente."
+        )
         uploaded_file = st.file_uploader("Escolha o arquivo Excel", type=["xlsx"])
 
         if uploaded_file is not None:
@@ -169,13 +195,55 @@ with tab_m1:
                     st.caption(f"📊 {len(df_preview)} linha(s) prontas para importação.")
 
                     if st.button("✅ Confirmar Importação em Lote"):
-                        dados_formatados = df_preview.values.tolist()
                         with st.spinner("Importando..."):
                             try:
-                                sheet_modelos.insert_rows(dados_formatados, row=2)
+                                df_existente = carregar_dados_modelos()
+
+                                mapa_existente = {}
+                                if not df_existente.empty:
+                                    for _, row in df_existente.iterrows():
+                                        chave = (
+                                            str(row["MANUAL"]).strip().upper(),
+                                            str(row["CAPITULO"]).strip().upper()
+                                        )
+                                        mapa_existente[chave] = int(row["_row"])
+
+                                # Se o próprio arquivo tiver linhas repetidas (mesmo MANUAL+CAPITULO),
+                                # mantém a última ocorrência do arquivo
+                                mapa_lote = {}
+                                for _, row in df_preview.iterrows():
+                                    chave = (
+                                        str(row["MANUAL"]).strip().upper(),
+                                        str(row["CAPITULO"]).strip().upper()
+                                    )
+                                    mapa_lote[chave] = row.tolist()
+
+                                linhas_novas = []
+                                atualizacoes = []
+
+                                for chave, valores in mapa_lote.items():
+                                    if chave in mapa_existente:
+                                        atualizacoes.append((mapa_existente[chave], valores))
+                                    else:
+                                        linhas_novas.append(valores)
+
+                                for linha_num, valores in atualizacoes:
+                                    sheet_modelos.update(
+                                        range_name=f"A{linha_num}:E{linha_num}",
+                                        values=[valores]
+                                    )
+
+                                if linhas_novas:
+                                    sheet_modelos.insert_rows(linhas_novas, row=2)
+
                                 st.cache_data.clear()
-                                st.success(f"✅ {len(dados_formatados)} modelo(s) importado(s) com sucesso!")
-                                logger.info(f"Importação em lote: {len(dados_formatados)} modelos")
+                                st.success(
+                                    f"✅ Importação concluída: {len(linhas_novas)} novo(s) modelo(s) inserido(s) "
+                                    f"e {len(atualizacoes)} sobrescrito(s)."
+                                )
+                                logger.info(
+                                    f"Importação em lote: {len(linhas_novas)} novos, {len(atualizacoes)} sobrescritos"
+                                )
                             except gspread.exceptions.APIError:
                                 st.error("❌ Erro na API do Google Sheets.")
                             except Exception as e:
