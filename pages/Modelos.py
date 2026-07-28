@@ -122,6 +122,9 @@ with tab_m1:
     st.subheader("➕ Adicionar Modelos")
     modo_add = st.radio("Método de cadastro:", ["Manual", "Upload em Lote (Excel)"], horizontal=True)
 
+    if "modelo_pendente" not in st.session_state:
+        st.session_state.modelo_pendente = None
+
     if modo_add == "Manual":
         with st.form("form_add_modelo", clear_on_submit=True):
             col1, col2 = st.columns(2)
@@ -133,50 +136,113 @@ with tab_m1:
                 m_montadora = st.selectbox("Montadora", LISTA_MONTADORAS)
                 m_modelo = st.text_input("Modelo").strip()
 
-            if st.form_submit_button("Salvar Modelo"):
-                if validar_modelo(m_modulo, m_manual, m_capitulo, m_montadora, m_modelo):
+            submitted = st.form_submit_button("Salvar Modelo")
+
+        if submitted:
+            if validar_modelo(m_modulo, m_manual, m_capitulo, m_montadora, m_modelo):
+                df_existente = carregar_dados_modelos()
+                existentes = pd.DataFrame()
+
+                if not df_existente.empty:
+                    existentes = df_existente[
+                        (df_existente["MÓDULO"].astype(str).str.strip().str.upper() == m_modulo.strip().upper()) &
+                        (df_existente["MANUAL"].astype(str).str.strip().str.upper() == m_manual.strip().upper()) &
+                        (df_existente["CAPITULO"].astype(str).str.strip().str.upper() == m_capitulo.strip().upper())
+                    ]
+
+                if existentes.empty:
                     with st.spinner("Salvando..."):
                         try:
-                            df_existente = carregar_dados_modelos()
-                            linha_existente = None
-
-                            if not df_existente.empty:
-                                match = df_existente[
-                                    (df_existente["MANUAL"].astype(str).str.strip().str.upper() == m_manual.strip().upper()) &
-                                    (df_existente["CAPITULO"].astype(str).str.strip().str.upper() == m_capitulo.strip().upper())
-                                ]
-                                if not match.empty:
-                                    linha_existente = int(match.iloc[0]["_row"])
-
-                            if linha_existente:
-                                sheet_modelos.update(
-                                    range_name=f"A{linha_existente}:E{linha_existente}",
-                                    values=[[m_modulo, m_manual, m_capitulo, m_montadora, m_modelo]]
-                                )
-                                st.cache_data.clear()
-                                st.success(
-                                    f"✅ Já existia um registro para Manual '{m_manual}' + Capítulo "
-                                    f"'{m_capitulo}'. Ele foi sobrescrito com os novos dados!"
-                                )
-                                logger.info(f"Modelo sobrescrito (linha {linha_existente}): {m_manual} - {m_capitulo} -> {m_modelo}")
-                            else:
-                                sheet_modelos.insert_row(
-                                    [m_modulo, m_manual, m_capitulo, m_montadora, m_modelo],
-                                    index=2
-                                )
-                                st.cache_data.clear()
-                                st.success("✅ Modelo salvo com sucesso!")
-                                logger.info(f"Modelo criado: {m_modelo}")
+                            sheet_modelos.insert_row(
+                                [m_modulo, m_manual, m_capitulo, m_montadora, m_modelo],
+                                index=2
+                            )
+                            st.cache_data.clear()
+                            st.success("✅ Modelo salvo com sucesso!")
+                            logger.info(f"Modelo criado: {m_modelo}")
                         except gspread.exceptions.APIError:
                             st.error("❌ Erro na API do Google Sheets. Tente novamente.")
                         except Exception as e:
                             st.error(f"❌ Erro ao salvar: {str(e)}")
                             logger.error(f"Erro ao salvar modelo: {e}", exc_info=True)
+                else:
+                    st.session_state.modelo_pendente = {
+                        "novo": [m_modulo, m_manual, m_capitulo, m_montadora, m_modelo],
+                        "linhas_existentes": existentes["_row"].astype(int).tolist(),
+                        "modelos_existentes": existentes[["MONTADORA", "MODELO"]].values.tolist()
+                    }
+
+        # --- INTERFACE DE DECISÃO (aparece só quando há conflito pendente) ---
+        if st.session_state.modelo_pendente:
+            pendente = st.session_state.modelo_pendente
+            modulo_p, manual_p, capitulo_p, montadora_p, modelo_p = pendente["novo"]
+
+            st.divider()
+            st.warning(
+                f"⚠️ O capítulo **{capitulo_p}** do manual **{manual_p}** (módulo **{modulo_p}**) "
+                f"já possui **{len(pendente['modelos_existentes'])} modelo(s)** cadastrado(s):"
+            )
+            df_show = pd.DataFrame(pendente["modelos_existentes"], columns=["MONTADORA", "MODELO"])
+            st.dataframe(df_show, use_container_width=True, hide_index=True)
+
+            st.write(f"**Modelo que você está tentando cadastrar:** {montadora_p} — {modelo_p}")
+            st.write("O que você deseja fazer?")
+
+            col_a, col_b, col_c = st.columns(3)
+            with col_a:
+                substituir = st.button("🔄 Substituir Todos", use_container_width=True, type="primary")
+            with col_b:
+                adicionar = st.button("➕ Adicionar (manter existentes)", use_container_width=True)
+            with col_c:
+                cancelar = st.button("❌ Cancelar", use_container_width=True)
+
+            if substituir:
+                with st.spinner("Substituindo registros..."):
+                    try:
+                        # Deleta de baixo para cima para não invalidar os índices das próximas linhas
+                        for linha in sorted(pendente["linhas_existentes"], reverse=True):
+                            sheet_modelos.delete_rows(linha)
+                        sheet_modelos.insert_row(pendente["novo"], index=2)
+                        st.cache_data.clear()
+                        st.success(
+                            f"✅ Todos os modelos anteriores desse capítulo foram removidos. "
+                            f"Agora só consta: {montadora_p} — {modelo_p}"
+                        )
+                        logger.info(f"Modelos substituídos no capítulo {capitulo_p} ({manual_p})")
+                    except gspread.exceptions.APIError:
+                        st.error("❌ Erro na API do Google Sheets.")
+                    except Exception as e:
+                        st.error(f"❌ Erro ao substituir: {str(e)}")
+                        logger.error(f"Erro ao substituir modelos: {e}", exc_info=True)
+                st.session_state.modelo_pendente = None
+                st.rerun()
+
+            if adicionar:
+                with st.spinner("Adicionando..."):
+                    try:
+                        sheet_modelos.insert_row(pendente["novo"], index=2)
+                        st.cache_data.clear()
+                        st.success("✅ Modelo adicionado sem alterar os registros já existentes!")
+                        logger.info(f"Modelo adicionado ao capítulo existente: {modelo_p} ({manual_p}/{capitulo_p})")
+                    except gspread.exceptions.APIError:
+                        st.error("❌ Erro na API do Google Sheets.")
+                    except Exception as e:
+                        st.error(f"❌ Erro ao adicionar: {str(e)}")
+                        logger.error(f"Erro ao adicionar modelo: {e}", exc_info=True)
+                st.session_state.modelo_pendente = None
+                st.rerun()
+
+            if cancelar:
+                st.session_state.modelo_pendente = None
+                st.info("Operação cancelada.")
+                st.rerun()
 
     else:  # Upload em Lote
+        st.session_state.modelo_pendente = None  # limpa qualquer decisão pendente ao trocar de modo
         st.info(
             "📋 O arquivo Excel deve conter as colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO. "
-            "Se já existir um registro com o mesmo MANUAL e CAPITULO, ele será sobrescrito automaticamente."
+            "Se já existir um registro com o mesmo MÓDULO + MANUAL + CAPITULO, ele será sobrescrito "
+            "automaticamente (no lote não é possível escolher linha por linha)."
         )
         uploaded_file = st.file_uploader("Escolha o arquivo Excel", type=["xlsx"])
 
@@ -203,16 +269,16 @@ with tab_m1:
                                 if not df_existente.empty:
                                     for _, row in df_existente.iterrows():
                                         chave = (
+                                            str(row["MÓDULO"]).strip().upper(),
                                             str(row["MANUAL"]).strip().upper(),
                                             str(row["CAPITULO"]).strip().upper()
                                         )
                                         mapa_existente[chave] = int(row["_row"])
 
-                                # Se o próprio arquivo tiver linhas repetidas (mesmo MANUAL+CAPITULO),
-                                # mantém a última ocorrência do arquivo
                                 mapa_lote = {}
                                 for _, row in df_preview.iterrows():
                                     chave = (
+                                        str(row["MÓDULO"]).strip().upper(),
                                         str(row["MANUAL"]).strip().upper(),
                                         str(row["CAPITULO"]).strip().upper()
                                     )
@@ -430,6 +496,49 @@ with tab_m5:
         st.divider()
         st.write(f"### 📊 Visualização: {len(df_exp)} registros encontrados")
         st.dataframe(df_exp, use_container_width=True, hide_index=True)
+
+        # --- VERIFICAÇÃO DE DUPLICIDADE ---
+        st.divider()
+        st.subheader("🔎 Verificação de Modelos Duplicados")
+        st.caption(
+            "Um registro é considerado duplicado quando existe outro com o mesmo MÓDULO, "
+            "MANUAL e CAPITULO — independentemente do nome do MODELO ou da MONTADORA."
+        )
+
+        df_dup_check = df_mod_geral.copy()
+        df_dup_check["_CHAVE"] = (
+            df_dup_check["MÓDULO"].astype(str).str.strip().str.upper() + " | " +
+            df_dup_check["MANUAL"].astype(str).str.strip().str.upper() + " | " +
+            df_dup_check["CAPITULO"].astype(str).str.strip().str.upper()
+        )
+
+        duplicados = df_dup_check[df_dup_check.duplicated(subset=["_CHAVE"], keep=False)]
+
+        if duplicados.empty:
+            st.success("✅ Nenhuma duplicidade encontrada na base atual.")
+        else:
+            n_grupos = duplicados["_CHAVE"].nunique()
+            st.warning(
+                f"⚠️ Encontrado(s) **{n_grupos} grupo(s)** de MÓDULO + MANUAL + CAPITULO "
+                f"com múltiplos registros, totalizando **{len(duplicados)} linhas**."
+            )
+
+            duplicados_ordenados = duplicados.sort_values(by=["MÓDULO", "MANUAL", "CAPITULO"])
+            colunas_dup = [c for c in duplicados_ordenados.columns if c not in ["_row", "_CHAVE"]]
+            st.dataframe(duplicados_ordenados[colunas_dup], use_container_width=True, hide_index=True)
+
+            buffer_dup = io.BytesIO()
+            with pd.ExcelWriter(buffer_dup, engine='openpyxl') as writer:
+                duplicados_ordenados[colunas_dup].to_excel(writer, index=False, sheet_name="Duplicados")
+            buffer_dup.seek(0)
+            st.download_button(
+                "📥 Baixar Lista de Duplicados (Excel)",
+                data=buffer_dup.getvalue(),
+                file_name=f"modelos_duplicados_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.ms-excel",
+                key="download_duplicados"
+            )
+
         st.divider()
 
         # Exportação
