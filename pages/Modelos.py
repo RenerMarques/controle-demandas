@@ -271,16 +271,21 @@ with tab_m1:
                                         chave = (
                                             str(row["MÓDULO"]).strip().upper(),
                                             str(row["MANUAL"]).strip().upper(),
-                                            str(row["CAPITULO"]).strip().upper()
-                                        )
+                                            str(row["CAPITULO"]).strip().upper(),
+                                            str(row["MODELO"]).strip().upper()
+                                            )
                                         mapa_existente[chave] = int(row["_row"])
 
+                                # Chave agora inclui MODELO — assim, modelos diferentes no mesmo
+                                # capítulo NÃO se sobrescrevem entre si. Só é tratado como
+                                # duplicata quando MÓDULO+MANUAL+CAPITULO+MODELO forem idênticos.
                                 mapa_lote = {}
                                 for _, row in df_preview.iterrows():
                                     chave = (
                                         str(row["MÓDULO"]).strip().upper(),
                                         str(row["MANUAL"]).strip().upper(),
-                                        str(row["CAPITULO"]).strip().upper()
+                                        str(row["CAPITULO"]).strip().upper(),
+                                        str(row["MODELO"]).strip().upper()
                                     )
                                     mapa_lote[chave] = row.tolist()
 
@@ -305,7 +310,7 @@ with tab_m1:
                                 st.cache_data.clear()
                                 st.success(
                                     f"✅ Importação concluída: {len(linhas_novas)} novo(s) modelo(s) inserido(s) "
-                                    f"e {len(atualizacoes)} sobrescrito(s)."
+                                    f"e {len(atualizacoes)} sobrescrito(s) (registro idêntico já existia)."
                                 )
                                 logger.info(
                                     f"Importação em lote: {len(linhas_novas)} novos, {len(atualizacoes)} sobrescritos"
