@@ -81,6 +81,13 @@ with col_right:
     except Exception as e:
         st.error(f"❌ Erro ao exibir atividade: {str(e)}")
         logger.error(f"Erro ao exibir atividade recente: {e}", exc_info=True)
+        
+with st.sidebar:
+    st.divider()
+    if st.button("🔄 Atualizar Dados", use_container_width=True):
+        st.cache_data.clear()
+        st.success("✅ Cache limpo! Os dados serão recarregados da planilha.")
+        st.rerun()
 
 # --- AVISOS ---
 st.divider()
