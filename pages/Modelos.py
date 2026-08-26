@@ -122,9 +122,6 @@ with tab_m1:
     st.subheader("➕ Adicionar Modelos")
     modo_add = st.radio("Método de cadastro:", ["Manual", "Upload em Lote (Excel)"], horizontal=True)
 
-    if "modelo_pendente" not in st.session_state:
-        st.session_state.modelo_pendente = None
-
     if modo_add == "Manual":
         with st.form("form_add_modelo", clear_on_submit=True):
             col1, col2 = st.columns(2)
@@ -140,19 +137,38 @@ with tab_m1:
 
         if submitted:
             if validar_modelo(m_modulo, m_manual, m_capitulo, m_montadora, m_modelo):
-                df_existente = carregar_dados_modelos()
-                existentes = pd.DataFrame()
+                with st.spinner("Salvando..."):
+                    try:
+                        df_existente = carregar_dados_modelos()
+                        linhas_existentes = []
 
-                if not df_existente.empty:
-                    existentes = df_existente[
-                        (df_existente["MÓDULO"].astype(str).str.strip().str.upper() == m_modulo.strip().upper()) &
-                        (df_existente["MANUAL"].astype(str).str.strip().str.upper() == m_manual.strip().upper()) &
-                        (df_existente["CAPITULO"].astype(str).str.strip().str.upper() == m_capitulo.strip().upper())
-                    ]
+                        if not df_existente.empty:
+                            match = df_existente[
+                                (df_existente["MÓDULO"].astype(str).str.strip().str.upper() == m_modulo.strip().upper()) &
+                                (df_existente["MANUAL"].astype(str).str.strip().str.upper() == m_manual.strip().upper()) &
+                                (df_existente["CAPITULO"].astype(str).str.strip().str.upper() == m_capitulo.strip().upper())
+                            ]
+                            if not match.empty:
+                                linhas_existentes = match["_row"].astype(int).tolist()
 
-                if existentes.empty:
-                    with st.spinner("Salvando..."):
-                        try:
+                        if linhas_existentes:
+                            # Apaga de baixo para cima para não invalidar os índices das próximas linhas
+                            for linha in sorted(linhas_existentes, reverse=True):
+                                sheet_modelos.delete_rows(linha)
+
+                            sheet_modelos.insert_row(
+                                [m_modulo, m_manual, m_capitulo, m_montadora, m_modelo],
+                                index=2
+                            )
+                            st.cache_data.clear()
+                            st.success(
+                                f"✅ {len(linhas_existentes)} registro(s) anterior(es) do capítulo '{m_capitulo}' "
+                                f"({m_manual}) foram substituídos. Agora consta apenas: {m_montadora} — {m_modelo}"
+                            )
+                            logger.info(
+                                f"Modelos substituídos: {m_modulo}/{m_manual}/{m_capitulo} -> {m_modelo}"
+                            )
+                        else:
                             sheet_modelos.insert_row(
                                 [m_modulo, m_manual, m_capitulo, m_montadora, m_modelo],
                                 index=2
@@ -160,89 +176,18 @@ with tab_m1:
                             st.cache_data.clear()
                             st.success("✅ Modelo salvo com sucesso!")
                             logger.info(f"Modelo criado: {m_modelo}")
-                        except gspread.exceptions.APIError:
-                            st.error("❌ Erro na API do Google Sheets. Tente novamente.")
-                        except Exception as e:
-                            st.error(f"❌ Erro ao salvar: {str(e)}")
-                            logger.error(f"Erro ao salvar modelo: {e}", exc_info=True)
-                else:
-                    st.session_state.modelo_pendente = {
-                        "novo": [m_modulo, m_manual, m_capitulo, m_montadora, m_modelo],
-                        "linhas_existentes": existentes["_row"].astype(int).tolist(),
-                        "modelos_existentes": existentes[["MONTADORA", "MODELO"]].values.tolist()
-                    }
 
-        # --- INTERFACE DE DECISÃO (aparece só quando há conflito pendente) ---
-        if st.session_state.modelo_pendente:
-            pendente = st.session_state.modelo_pendente
-            modulo_p, manual_p, capitulo_p, montadora_p, modelo_p = pendente["novo"]
-
-            st.divider()
-            st.warning(
-                f"⚠️ O capítulo **{capitulo_p}** do manual **{manual_p}** (módulo **{modulo_p}**) "
-                f"já possui **{len(pendente['modelos_existentes'])} modelo(s)** cadastrado(s):"
-            )
-            df_show = pd.DataFrame(pendente["modelos_existentes"], columns=["MONTADORA", "MODELO"])
-            st.dataframe(df_show, use_container_width=True, hide_index=True)
-
-            st.write(f"**Modelo que você está tentando cadastrar:** {montadora_p} — {modelo_p}")
-            st.write("O que você deseja fazer?")
-
-            col_a, col_b, col_c = st.columns(3)
-            with col_a:
-                substituir = st.button("🔄 Substituir Todos", use_container_width=True, type="primary")
-            with col_b:
-                adicionar = st.button("➕ Adicionar (manter existentes)", use_container_width=True)
-            with col_c:
-                cancelar = st.button("❌ Cancelar", use_container_width=True)
-
-            if substituir:
-                with st.spinner("Substituindo registros..."):
-                    try:
-                        # Deleta de baixo para cima para não invalidar os índices das próximas linhas
-                        for linha in sorted(pendente["linhas_existentes"], reverse=True):
-                            sheet_modelos.delete_rows(linha)
-                        sheet_modelos.insert_row(pendente["novo"], index=2)
-                        st.cache_data.clear()
-                        st.success(
-                            f"✅ Todos os modelos anteriores desse capítulo foram removidos. "
-                            f"Agora só consta: {montadora_p} — {modelo_p}"
-                        )
-                        logger.info(f"Modelos substituídos no capítulo {capitulo_p} ({manual_p})")
                     except gspread.exceptions.APIError:
-                        st.error("❌ Erro na API do Google Sheets.")
+                        st.error("❌ Erro na API do Google Sheets. Tente novamente.")
                     except Exception as e:
-                        st.error(f"❌ Erro ao substituir: {str(e)}")
-                        logger.error(f"Erro ao substituir modelos: {e}", exc_info=True)
-                st.session_state.modelo_pendente = None
-                st.rerun()
-
-            if adicionar:
-                with st.spinner("Adicionando..."):
-                    try:
-                        sheet_modelos.insert_row(pendente["novo"], index=2)
-                        st.cache_data.clear()
-                        st.success("✅ Modelo adicionado sem alterar os registros já existentes!")
-                        logger.info(f"Modelo adicionado ao capítulo existente: {modelo_p} ({manual_p}/{capitulo_p})")
-                    except gspread.exceptions.APIError:
-                        st.error("❌ Erro na API do Google Sheets.")
-                    except Exception as e:
-                        st.error(f"❌ Erro ao adicionar: {str(e)}")
-                        logger.error(f"Erro ao adicionar modelo: {e}", exc_info=True)
-                st.session_state.modelo_pendente = None
-                st.rerun()
-
-            if cancelar:
-                st.session_state.modelo_pendente = None
-                st.info("Operação cancelada.")
-                st.rerun()
+                        st.error(f"❌ Erro ao salvar: {str(e)}")
+                        logger.error(f"Erro ao salvar modelo: {e}", exc_info=True)
 
     else:  # Upload em Lote
-        st.session_state.modelo_pendente = None  # limpa qualquer decisão pendente ao trocar de modo
         st.info(
             "📋 O arquivo Excel deve conter as colunas: MÓDULO, MANUAL, CAPITULO, MONTADORA, MODELO. "
-            "Se já existir um registro com o mesmo MÓDULO + MANUAL + CAPITULO, ele será sobrescrito "
-            "automaticamente (no lote não é possível escolher linha por linha)."
+            "Se já existir algum registro com o mesmo MÓDULO + MANUAL + CAPITULO, TODOS os registros "
+            "antigos dessa combinação serão apagados e substituídos pelos modelos trazidos no arquivo."
         )
         uploaded_file = st.file_uploader("Escolha o arquivo Excel", type=["xlsx"])
 
@@ -265,55 +210,54 @@ with tab_m1:
                             try:
                                 df_existente = carregar_dados_modelos()
 
+                                # Mapa de chave (MÓDULO+MANUAL+CAPITULO) -> lista de linhas existentes na planilha
                                 mapa_existente = {}
                                 if not df_existente.empty:
                                     for _, row in df_existente.iterrows():
                                         chave = (
                                             str(row["MÓDULO"]).strip().upper(),
                                             str(row["MANUAL"]).strip().upper(),
-                                            str(row["CAPITULO"]).strip().upper(),
-                                            str(row["MODELO"]).strip().upper()
-                                            )
-                                        mapa_existente[chave] = int(row["_row"])
+                                            str(row["CAPITULO"]).strip().upper()
+                                        )
+                                        mapa_existente.setdefault(chave, []).append(int(row["_row"]))
 
-                                # Chave agora inclui MODELO — assim, modelos diferentes no mesmo
-                                # capítulo NÃO se sobrescrevem entre si. Só é tratado como
-                                # duplicata quando MÓDULO+MANUAL+CAPITULO+MODELO forem idênticos.
+                                # Agrupa as linhas do arquivo pela mesma chave, preservando
+                                # múltiplos modelos diferentes dentro do mesmo capítulo
                                 mapa_lote = {}
                                 for _, row in df_preview.iterrows():
                                     chave = (
                                         str(row["MÓDULO"]).strip().upper(),
                                         str(row["MANUAL"]).strip().upper(),
-                                        str(row["CAPITULO"]).strip().upper(),
-                                        str(row["MODELO"]).strip().upper()
+                                        str(row["CAPITULO"]).strip().upper()
                                     )
-                                    mapa_lote[chave] = row.tolist()
+                                    mapa_lote.setdefault(chave, []).append(row.tolist())
 
+                                linhas_para_apagar = []
                                 linhas_novas = []
-                                atualizacoes = []
+                                capitulos_substituidos = 0
 
-                                for chave, valores in mapa_lote.items():
+                                for chave, valores_lista in mapa_lote.items():
                                     if chave in mapa_existente:
-                                        atualizacoes.append((mapa_existente[chave], valores))
-                                    else:
-                                        linhas_novas.append(valores)
+                                        linhas_para_apagar.extend(mapa_existente[chave])
+                                        capitulos_substituidos += 1
+                                    linhas_novas.extend(valores_lista)
 
-                                for linha_num, valores in atualizacoes:
-                                    sheet_modelos.update(
-                                        range_name=f"A{linha_num}:E{linha_num}",
-                                        values=[valores]
-                                    )
+                                # Apaga de baixo para cima para não invalidar os índices
+                                for linha in sorted(linhas_para_apagar, reverse=True):
+                                    sheet_modelos.delete_rows(linha)
 
                                 if linhas_novas:
                                     sheet_modelos.insert_rows(linhas_novas, row=2)
 
                                 st.cache_data.clear()
                                 st.success(
-                                    f"✅ Importação concluída: {len(linhas_novas)} novo(s) modelo(s) inserido(s) "
-                                    f"e {len(atualizacoes)} sobrescrito(s) (registro idêntico já existia)."
+                                    f"✅ Importação concluída: {len(linhas_novas)} modelo(s) inserido(s) "
+                                    f"no total. {capitulos_substituidos} capítulo(s) tiveram seus registros "
+                                    f"antigos apagados e substituídos pelos do arquivo."
                                 )
                                 logger.info(
-                                    f"Importação em lote: {len(linhas_novas)} novos, {len(atualizacoes)} sobrescritos"
+                                    f"Importação em lote: {len(linhas_novas)} modelos inseridos, "
+                                    f"{capitulos_substituidos} capítulos substituídos"
                                 )
                             except gspread.exceptions.APIError:
                                 st.error("❌ Erro na API do Google Sheets.")
