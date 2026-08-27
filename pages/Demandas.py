@@ -306,18 +306,88 @@ with tab2:
             st.write(f"**Total de registros:** {len(final)}")
 
         else:  # Busca por Campo Específico
-            col_1, col_2 = st.columns(2)
-            with col_1:
-                colunas_busca = [c for c in df.columns if c != "_row"]
-                coluna_alvo = st.selectbox("Selecione o campo para buscar:", colunas_busca)
-            with col_2:
-                valor_busca = st.text_input("Digite o valor para busca:").strip()
+            st.caption(
+                "Selecione um ou mais valores em cada campo para combinar a busca "
+                "(ex.: várias demandas, vários capítulos, várias datas ao mesmo tempo). "
+                "Deixe em branco para não filtrar por aquele campo."
+            )
 
-            if valor_busca:
-                resultado = df[df[coluna_alvo].astype(str).str.contains(valor_busca, case=False, na=False)]
-                st.write(f"**Resultados para '{valor_busca}' em {coluna_alvo}:** {len(resultado)} encontrados")
-                colunas_visiveis = [c for c in resultado.columns if c != "_row"]
-                st.dataframe(resultado[colunas_visiveis], use_container_width=True, hide_index=True)
+            col_b1, col_b2, col_b3 = st.columns(3)
+            with col_b1:
+                b_demanda = st.multiselect("Demanda:", sorted(df["DEMANDA"].unique().tolist()))
+                b_tipo = st.multiselect("Tipo Demanda:", sorted(df["TIPO DEMANDA"].unique().tolist()))
+                b_modulo = st.multiselect("Módulo:", sorted(df["MÓDULO"].unique().tolist()))
+            with col_b2:
+                b_manual = st.multiselect("Manual:", sorted(df["MANUAL"].unique().tolist()))
+                b_data = st.multiselect("Data Linkagem:", sorted(df["DATA LINKAGEM"].astype(str).unique().tolist()))
+                b_capitulo = st.multiselect("Capítulo:", sorted(df["CAPITULO"].astype(str).unique().tolist()))
+            with col_b3:
+                b_montadora = st.multiselect("Montadora:", sorted(df["MONTADORA"].unique().tolist()))
+                b_versao = st.multiselect("Versão:", sorted(df["VERSÃO"].unique().tolist()))
+
+            resultado = df.copy()
+            if b_demanda:
+                resultado = resultado[resultado["DEMANDA"].isin(b_demanda)]
+            if b_tipo:
+                resultado = resultado[resultado["TIPO DEMANDA"].isin(b_tipo)]
+            if b_modulo:
+                resultado = resultado[resultado["MÓDULO"].isin(b_modulo)]
+            if b_manual:
+                resultado = resultado[resultado["MANUAL"].isin(b_manual)]
+            if b_data:
+                resultado = resultado[resultado["DATA LINKAGEM"].astype(str).isin(b_data)]
+            if b_capitulo:
+                resultado = resultado[resultado["CAPITULO"].astype(str).isin(b_capitulo)]
+            if b_montadora:
+                resultado = resultado[resultado["MONTADORA"].isin(b_montadora)]
+            if b_versao:
+                resultado = resultado[resultado["VERSÃO"].isin(b_versao)]
+
+            st.divider()
+            colunas_visiveis = [c for c in resultado.columns if c != "_row"]
+            st.write(f"**Total de registros encontrados:** {len(resultado)}")
+            st.dataframe(resultado[colunas_visiveis], use_container_width=True, hide_index=True)
+
+            if not resultado.empty:
+                st.subheader("📥 Exportar Resultado da Busca")
+                formato_busca = st.radio(
+                    "Formato de exportação:", ["Excel (.xlsx)", "PDF (.pdf)"], key="formato_busca"
+                )
+
+                df_busca_export = resultado[colunas_visiveis]
+
+                partes_filtro_b = []
+                if b_demanda: partes_filtro_b.append(f"Demanda: {', '.join(b_demanda)}")
+                if b_tipo: partes_filtro_b.append(f"Tipo: {', '.join(b_tipo)}")
+                if b_modulo: partes_filtro_b.append(f"Módulo: {', '.join(b_modulo)}")
+                if b_manual: partes_filtro_b.append(f"Manual: {', '.join(b_manual)}")
+                if b_data: partes_filtro_b.append(f"Data: {', '.join(b_data)}")
+                if b_capitulo: partes_filtro_b.append(f"Capítulo: {', '.join(b_capitulo)}")
+                if b_montadora: partes_filtro_b.append(f"Montadora: {', '.join(b_montadora)}")
+                if b_versao: partes_filtro_b.append(f"Versão: {', '.join(b_versao)}")
+                filtros_texto_b = " | ".join(partes_filtro_b) if partes_filtro_b else "Todos os registros"
+
+                if formato_busca == "Excel (.xlsx)":
+                    buffer_b = io.BytesIO()
+                    with pd.ExcelWriter(buffer_b, engine='openpyxl') as writer:
+                        df_busca_export.to_excel(writer, index=False, sheet_name="Busca")
+                    buffer_b.seek(0)
+                    st.download_button(
+                        "📥 Baixar Excel",
+                        data=buffer_b.getvalue(),
+                        file_name=f"busca_demandas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.ms-excel",
+                        key="download_busca_excel"
+                    )
+                else:  # PDF
+                    buffer_b = gerar_pdf_demandas(df_busca_export, colunas_visiveis, filtros_texto_b)
+                    st.download_button(
+                        "📥 Baixar PDF",
+                        data=buffer_b.getvalue(),
+                        file_name=f"busca_demandas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        key="download_busca_pdf"
+                    )
 
 # ============ TAB 3: EDITAR ============
 with tab3:
