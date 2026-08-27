@@ -314,16 +314,16 @@ with tab2:
 
             col_b1, col_b2, col_b3 = st.columns(3)
             with col_b1:
-                b_demanda = st.multiselect("Demanda:", sorted(df["DEMANDA"].unique().tolist()))
-                b_tipo = st.multiselect("Tipo Demanda:", sorted(df["TIPO DEMANDA"].unique().tolist()))
-                b_modulo = st.multiselect("Módulo:", sorted(df["MÓDULO"].unique().tolist()))
+                b_demanda = st.multiselect("Demanda:", sorted(df["DEMANDA"].unique().tolist()), key="busca_demanda")
+                b_tipo = st.multiselect("Tipo Demanda:", sorted(df["TIPO DEMANDA"].unique().tolist()), key="busca_tipo")
+                b_modulo = st.multiselect("Módulo:", sorted(df["MÓDULO"].unique().tolist()), key="busca_modulo")
             with col_b2:
-                b_manual = st.multiselect("Manual:", sorted(df["MANUAL"].unique().tolist()))
-                b_data = st.multiselect("Data Linkagem:", sorted(df["DATA LINKAGEM"].astype(str).unique().tolist()))
-                b_capitulo = st.multiselect("Capítulo:", sorted(df["CAPITULO"].astype(str).unique().tolist()))
+                b_manual = st.multiselect("Manual:", sorted(df["MANUAL"].unique().tolist()), key="busca_manual")
+                b_data = st.multiselect("Data Linkagem:", sorted(df["DATA LINKAGEM"].astype(str).unique().tolist()), key="busca_data")
+                b_capitulo = st.multiselect("Capítulo:", sorted(df["CAPITULO"].astype(str).unique().tolist()), key="busca_capitulo")
             with col_b3:
-                b_montadora = st.multiselect("Montadora:", sorted(df["MONTADORA"].unique().tolist()))
-                b_versao = st.multiselect("Versão:", sorted(df["VERSÃO"].unique().tolist()))
+                b_montadora = st.multiselect("Montadora:", sorted(df["MONTADORA"].unique().tolist()), key="busca_montadora")
+                b_versao = st.multiselect("Versão:", sorted(df["VERSÃO"].unique().tolist()), key="busca_versao")
 
             resultado = df.copy()
             if b_demanda:
@@ -532,13 +532,13 @@ with tab5:
 
         col_f1, col_f2, col_f3 = st.columns(3)
         with col_f1:
-            f_tipo = st.multiselect("Tipo Demanda:", sorted(df_geral["TIPO DEMANDA"].unique().tolist()))
-            f_modulo = st.multiselect("Módulo:", sorted(df_geral["MÓDULO"].unique().tolist()))
+            f_tipo = st.multiselect("Tipo Demanda:", sorted(df_geral["TIPO DEMANDA"].unique().tolist()), key="rel_tipo")
+            f_modulo = st.multiselect("Módulo:", sorted(df_geral["MÓDULO"].unique().tolist()), key="rel_modulo")
         with col_f2:
-            f_manual = st.multiselect("Manual:", sorted(df_geral["MANUAL"].unique().tolist()))
-            f_montadora = st.multiselect("Montadora:", sorted(df_geral["MONTADORA"].unique().tolist()))
+            f_manual = st.multiselect("Manual:", sorted(df_geral["MANUAL"].unique().tolist()), key="rel_manual")
+            f_montadora = st.multiselect("Montadora:", sorted(df_geral["MONTADORA"].unique().tolist()), key="rel_montadora")
         with col_f3:
-            f_versao = st.multiselect("Versão:", sorted(df_geral["VERSÃO"].unique().tolist()))
+            f_versao = st.multiselect("Versão:", sorted(df_geral["VERSÃO"].unique().tolist()), key="rel_versao")
             formato = st.radio("Formato de exportação:", ["Excel (.xlsx)", "PDF (.pdf)"])
 
         df_export = df_geral.copy()
