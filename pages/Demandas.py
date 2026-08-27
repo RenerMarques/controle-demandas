@@ -4,10 +4,10 @@ from datetime import datetime
 import io
 import logging
 import gspread
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from config import (
     sheet_demandas, carregar_dados_demandas,
     LISTA_TIPOS, LISTA_MODULOS, LISTA_MANUAIS,
@@ -112,6 +112,60 @@ def validar_dataframe_upload_demandas(df):
         st.error("❌ Erros no arquivo:\n" + "\n".join(f"• {e}" for e in erros))
         return False
     return True
+
+def gerar_pdf_demandas(df_export, colunas_export, filtros_texto=""):
+    """Gera PDF do relatório de demandas em paisagem, com colunas proporcionais
+    ao conteúdo e quebra de texto automática (evita nomes cortados/sobrepostos)."""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=landscape(A4),
+        leftMargin=20, rightMargin=20, topMargin=30, bottomMargin=20
+    )
+    elements = []
+    styles = getSampleStyleSheet()
+
+    elements.append(Paragraph("Relatório de Demandas", styles['Heading1']))
+    if filtros_texto:
+        elements.append(Paragraph(f"Filtros aplicados: {filtros_texto}", styles['Normal']))
+    elements.append(Paragraph(f"Total de registros: {len(df_export)}", styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=7, leading=9)
+    header_style = ParagraphStyle(
+        'HeaderStyle', parent=styles['Normal'], fontSize=8, leading=10,
+        textColor=colors.whitesmoke, fontName='Helvetica-Bold'
+    )
+
+    # Pesos proporcionais de largura por coluna (colunas de texto mais longo
+    # recebem mais espaço; a soma dos pesos é normalizada para a largura útil da página)
+    pesos = {
+        "DEMANDA": 0.09, "TIPO DEMANDA": 0.10, "MÓDULO": 0.10,
+        "MANUAL": 0.20, "DATA LINKAGEM": 0.09, "CAPITULO": 0.07,
+        "MONTADORA": 0.16, "VERSÃO": 0.09
+    }
+    largura_util = landscape(A4)[0] - 40
+    soma_pesos = sum(pesos.get(c, 0.10) for c in colunas_export)
+    col_widths = [largura_util * (pesos.get(c, 0.10) / soma_pesos) for c in colunas_export]
+
+    header_row = [Paragraph(str(c), header_style) for c in colunas_export]
+    data = [header_row]
+    for _, row in df_export.iterrows():
+        data.append([Paragraph(str(v), cell_style) for v in row])
+
+    table = Table(data, colWidths=col_widths, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.Color(0.95, 0.95, 0.95)])
+    ]))
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
 
 # --- ABAS ---
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -400,66 +454,68 @@ with tab5:
 
         st.divider()
         st.subheader("📥 Gerar e Exportar Relatório")
-        col_sel, formato_sel = st.columns(2)
-        with col_sel:
-            filtro_versao = st.selectbox("Versão:", ["Todas"] + sorted(df_geral["VERSÃO"].unique().tolist()))
-            filtro_modulo = st.selectbox("Módulo:", ["Todos"] + sorted(df_geral["MÓDULO"].unique().tolist()))
-        with formato_sel:
+        st.caption(
+            "Selecione um ou mais valores em cada filtro para combinar relatórios "
+            "(ex.: várias versões e vários manuais ao mesmo tempo). Deixe em branco "
+            "para incluir todos os valores daquele campo."
+        )
+
+        col_f1, col_f2, col_f3 = st.columns(3)
+        with col_f1:
+            f_tipo = st.multiselect("Tipo Demanda:", sorted(df_geral["TIPO DEMANDA"].unique().tolist()))
+            f_modulo = st.multiselect("Módulo:", sorted(df_geral["MÓDULO"].unique().tolist()))
+        with col_f2:
+            f_manual = st.multiselect("Manual:", sorted(df_geral["MANUAL"].unique().tolist()))
+            f_montadora = st.multiselect("Montadora:", sorted(df_geral["MONTADORA"].unique().tolist()))
+        with col_f3:
+            f_versao = st.multiselect("Versão:", sorted(df_geral["VERSÃO"].unique().tolist()))
             formato = st.radio("Formato de exportação:", ["Excel (.xlsx)", "PDF (.pdf)"])
 
         df_export = df_geral.copy()
-        if filtro_versao != "Todas":
-            df_export = df_export[df_export["VERSÃO"] == filtro_versao]
-        if filtro_modulo != "Todos":
-            df_export = df_export[df_export["MÓDULO"] == filtro_modulo]
+        if f_tipo:
+            df_export = df_export[df_export["TIPO DEMANDA"].isin(f_tipo)]
+        if f_modulo:
+            df_export = df_export[df_export["MÓDULO"].isin(f_modulo)]
+        if f_manual:
+            df_export = df_export[df_export["MANUAL"].isin(f_manual)]
+        if f_montadora:
+            df_export = df_export[df_export["MONTADORA"].isin(f_montadora)]
+        if f_versao:
+            df_export = df_export[df_export["VERSÃO"].isin(f_versao)]
 
-        # Remove coluna _row antes de exportar
         colunas_export = [c for c in df_export.columns if c != "_row"]
         df_export = df_export[colunas_export]
 
-        if formato == "Excel (.xlsx)":
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                df_export.to_excel(writer, index=False, sheet_name="Demandas")
-            buffer.seek(0)
-            st.download_button(
-                "📥 Baixar Excel",
-                data=buffer.getvalue(),
-                file_name=f"relatorio_demandas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                mime="application/vnd.ms-excel"
-            )
+        st.write(f"**Registros encontrados:** {len(df_export)}")
+        st.dataframe(df_export, use_container_width=True, hide_index=True)
 
-        elif formato == "PDF (.pdf)":
-            buffer = io.BytesIO()
-            doc = SimpleDocTemplate(buffer, pagesize=A4)
-            elements = []
+        if df_export.empty:
+            st.warning("⚠️ Nenhum registro corresponde aos filtros selecionados.")
+        else:
+            partes_filtro = []
+            if f_tipo: partes_filtro.append(f"Tipo: {', '.join(f_tipo)}")
+            if f_modulo: partes_filtro.append(f"Módulo: {', '.join(f_modulo)}")
+            if f_manual: partes_filtro.append(f"Manual: {', '.join(f_manual)}")
+            if f_montadora: partes_filtro.append(f"Montadora: {', '.join(f_montadora)}")
+            if f_versao: partes_filtro.append(f"Versão: {', '.join(f_versao)}")
+            filtros_texto = " | ".join(partes_filtro) if partes_filtro else "Todos os registros"
 
-            # Título
-            styles = getSampleStyleSheet()
-            title = Paragraph("Relatório de Demandas", styles['Heading1'])
-            elements.append(title)
-            elements.append(Spacer(1, 12))
-
-            # Tabela
-            data = [colunas_export] + df_export.values.tolist()
-            table = Table(data, colWidths=[60, 60, 60, 60, 60, 60, 60, 60])
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-            ]))
-            elements.append(table)
-
-            doc.build(elements)
-            buffer.seek(0)
-            st.download_button(
-                "📥 Baixar PDF",
-                data=buffer.getvalue(),
-                file_name=f"relatorio_demandas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                mime="application/pdf"
-            )
+            if formato == "Excel (.xlsx)":
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                    df_export.to_excel(writer, index=False, sheet_name="Demandas")
+                buffer.seek(0)
+                st.download_button(
+                    "📥 Baixar Excel",
+                    data=buffer.getvalue(),
+                    file_name=f"relatorio_demandas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.ms-excel"
+                )
+            else:  # PDF
+                buffer = gerar_pdf_demandas(df_export, colunas_export, filtros_texto)
+                st.download_button(
+                    "📥 Baixar PDF",
+                    data=buffer.getvalue(),
+                    file_name=f"relatorio_demandas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                    mime="application/pdf"
+                )
